@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Pulse QR Scanner</title>
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -13,6 +13,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
@@ -22,8 +23,10 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            padding: 0;
-            margin: 0;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
         }
 
         .container {
@@ -32,56 +35,56 @@
             flex-direction: column;
             background: var(--tg-theme-bg-color, #000);
             color: var(--tg-theme-text-color, #fff);
+            height: 100%;
+            position: relative;
         }
 
-        .header {
-            padding: 16px;
-            text-align: center;
-            background: var(--tg-theme-secondary-bg-color, #1a1a1a);
-        }
-
-        .header h1 {
-            font-size: 24px;
-            margin-bottom: 8px;
-            color: var(--tg-theme-text-color, #fff);
-        }
-
-        .header p {
-            font-size: 14px;
-            color: var(--tg-theme-hint-color, #888);
-        }
-
-        .video-container {
+        .video-wrapper {
             position: relative;
             width: 100%;
-            max-width: 600px;
-            margin: 16px auto;
-            border-radius: 16px;
-            overflow: hidden;
+            flex: 1;
             background: #1a1a1a;
-            aspect-ratio: 4/3;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            overflow: hidden;
+            touch-action: none;
         }
 
         #video {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            transform-origin: center center;
+            transition: transform 0.05s ease;
+        }
+
+        #video.zooming {
+            transition: none;
         }
 
         #canvas {
             display: none;
         }
 
-        .overlay {
+        .scan-overlay {
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            border: 3px solid var(--tg-theme-button-color, #40a7e3);
-            border-radius: 16px;
             pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .scan-frame {
+            width: 70%;
+            max-width: 300px;
+            aspect-ratio: 1;
+            border: 3px solid var(--tg-theme-button-color, #40a7e3);
+            border-radius: 24px;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+            position: relative;
         }
 
         .scan-line {
@@ -92,6 +95,8 @@
             background: var(--tg-theme-button-color, #40a7e3);
             animation: scan 2s linear infinite;
             box-shadow: 0 0 10px var(--tg-theme-button-color, #40a7e3);
+            top: 50%;
+            transform: translateY(-50%);
         }
 
         @keyframes scan {
@@ -100,119 +105,198 @@
             100% { top: 10%; }
         }
 
+        .zoom-indicator {
+            position: absolute;
+            bottom: 80px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 20px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            pointer-events: auto;
+            z-index: 10;
+        }
+
+        .zoom-label {
+            color: #fff;
+            font-size: 14px;
+            min-width: 45px;
+            text-align: center;
+        }
+
+        .zoom-slider {
+            flex: 1;
+            height: 4px;
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .zoom-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--tg-theme-button-color, #40a7e3);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .zoom-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        .zoom-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: #fff;
+            width: 36px;
+            height: 36px;
+            border-radius: 18px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .zoom-btn:active {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
         .status-panel {
             background: var(--tg-theme-secondary-bg-color, #1a1a1a);
-            border-radius: 16px;
-            padding: 16px;
-            margin: 16px;
-            border: 1px solid var(--tg-theme-hint-color, #333);
+            padding: 12px 16px;
+            border-top: 1px solid var(--tg-theme-hint-color, #333);
+            position: relative;
+            z-index: 5;
         }
 
         .status-text {
-            font-size: 16px;
-            margin-bottom: 12px;
+            font-size: 14px;
             color: var(--tg-theme-text-color, #fff);
+            text-align: center;
+            margin-bottom: 8px;
         }
 
         .qr-result {
             background: #1a4d1a;
-            border-radius: 12px;
-            padding: 12px;
-            font-size: 14px;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 12px;
             word-break: break-all;
             border: 1px solid #00ff00;
             display: none;
+            margin-top: 8px;
         }
 
         .qr-result.active {
             display: block;
         }
 
-        .qr-result.error {
-            background: #4d1a1a;
-            border-color: #ff0000;
-        }
-
         .button-group {
             display: flex;
-            gap: 10px;
-            padding: 0 16px 16px;
-            flex-wrap: wrap;
+            gap: 8px;
+            padding: 8px 0;
         }
 
         button {
             flex: 1;
-            min-width: 120px;
-            padding: 16px 20px;
-            border-radius: 14px;
+            padding: 12px 16px;
+            border-radius: 12px;
             border: none;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 500;
             background: var(--tg-theme-button-color, #40a7e3);
             color: var(--tg-theme-button-text-color, #fff);
             cursor: pointer;
             transition: all 0.2s;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            touch-action: manipulation;
         }
 
         button:active {
-            transform: scale(0.98);
-            opacity: 0.8;
+            transform: scale(0.97);
+            opacity: 0.9;
         }
 
         button:disabled {
             opacity: 0.5;
-            cursor: not-allowed;
+            pointer-events: none;
         }
 
         button.stop {
             background: #ff3b30;
         }
 
-        .info {
-            padding: 16px;
-            font-size: 13px;
-            color: var(--tg-theme-hint-color, #888);
-            text-align: center;
+        button.secondary {
+            background: rgba(255, 255, 255, 0.1);
         }
 
-        #sessionId {
-            font-family: monospace;
-            background: var(--tg-theme-bg-color, #000);
-            padding: 4px 8px;
-            border-radius: 4px;
-            color: var(--tg-theme-button-color, #40a7e3);
+        .gesture-hint {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 12px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .gesture-hint span {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 4px 12px;
+            border-radius: 20px;
+            backdrop-filter: blur(5px);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>📷 Pulse QR Scanner</h1>
-            <p>Наведите камеру на QR-код пары</p>
-        </div>
-
-        <div class="video-container">
+        <div class="video-wrapper" id="videoWrapper">
             <video id="video" playsinline></video>
             <canvas id="canvas"></canvas>
-            <div class="overlay"></div>
-            <div class="scan-line"></div>
+
+            <div class="scan-overlay">
+                <div class="scan-frame">
+                    <div class="scan-line"></div>
+                </div>
+            </div>
+
+            <div class="gesture-hint">
+                <span>👆 Используйте два пальца для масштабирования</span>
+            </div>
+
+            <div class="zoom-indicator" id="zoomIndicator">
+                <span class="zoom-label" id="zoomValue">1.0x</span>
+                <input type="range" id="zoomSlider" class="zoom-slider" min="1" max="3" step="0.1" value="1">
+                <div class="zoom-buttons">
+                    <button class="zoom-btn" id="zoomOutBtn">−</button>
+                    <button class="zoom-btn" id="zoomInBtn">+</button>
+                </div>
+            </div>
         </div>
 
         <div class="status-panel">
             <div class="status-text" id="status">⏳ Запуск камеры...</div>
             <div id="qrResult" class="qr-result"></div>
-        </div>
 
-        <div class="button-group">
-            <button onclick="startScanning()" id="startBtn">▶️ Начать</button>
-            <button onclick="stopScanning()" id="stopBtn" class="stop" style="display: none;">⏹️ Остановить</button>
-            <button onclick="closeScanner()" id="closeBtn">❌ Закрыть</button>
-        </div>
-
-        <div class="info">
-            Сессия: <span id="sessionId"></span><br>
-            QR будет обнаружен автоматически
+            <div class="button-group">
+                <button onclick="startScanning()" id="startBtn" class="secondary">▶️ Начать</button>
+                <button onclick="stopScanning()" id="stopBtn" class="stop" style="display: none;">⏹️ Стоп</button>
+                <button onclick="toggleTorch()" id="torchBtn" class="secondary" style="display: none;">🔦 Фонарик</button>
+            </div>
         </div>
     </div>
 
@@ -224,21 +308,37 @@
         let scanning = false;
         let animationFrame = null;
         let lastScanTime = 0;
-        const SCAN_INTERVAL = 500; // Сканируем каждые 500ms
+        const SCAN_INTERVAL = 300; // Сканируем каждые 300ms
 
-        // Получаем параметры из URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const sessionId = urlParams.get('session') || 'default';
-        document.getElementById('sessionId').textContent = sessionId;
+        // Переменные для зума
+        let currentZoom = 1;
+        let minZoom = 1;
+        let maxZoom = 3;
+        let stream = null;
+        let torchSupported = false;
+        let torchEnabled = false;
+
+        // Переменные для жестов
+        let initialDistance = 0;
+        let initialZoom = 1;
 
         // Инициализация Telegram
         function initTelegram() {
             if (tg) {
                 tg.ready();
                 tg.expand();
-                tg.MainButton.setText('Закрыть');
-                tg.MainButton.onClick(() => tg.close());
+
+                // Настраиваем главную кнопку
+                tg.MainButton.setText('Готово');
+                tg.MainButton.onClick(() => {
+                    sendDataToBot();
+                    tg.close();
+                });
+
                 setStatus('✅ Telegram WebApp готов');
+
+                // Показываем основную кнопку когда нужно
+                tg.MainButton.hide();
             } else {
                 setStatus('⚠️ Режим без Telegram (тестовый)');
             }
@@ -247,14 +347,15 @@
         // Запуск камеры
         async function startCamera() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({
+                const constraints = {
                     video: {
                         facingMode: 'environment',
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
                     }
-                });
+                };
 
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = stream;
                 video.setAttribute('playsinline', true);
 
@@ -264,6 +365,29 @@
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
 
+                // Проверяем поддержку зума
+                const track = stream.getVideoTracks()[0];
+                const capabilities = track.getCapabilities?.();
+
+                if (capabilities?.zoom) {
+                    minZoom = capabilities.zoom.min || 1;
+                    maxZoom = capabilities.zoom.max || 3;
+                    document.getElementById('zoomSlider').min = minZoom;
+                    document.getElementById('zoomSlider').max = maxZoom;
+
+                    // Показываем элементы управления зумом
+                    document.getElementById('zoomIndicator').style.display = 'flex';
+                }
+
+                // Проверяем поддержку фонарика
+                if (capabilities?.torch) {
+                    torchSupported = true;
+                    document.getElementById('torchBtn').style.display = 'block';
+                }
+
+                // Добавляем обработчики жестов
+                setupGestureHandling();
+
                 setStatus('✅ Камера готова');
                 return true;
 
@@ -271,6 +395,78 @@
                 console.error('Camera error:', err);
                 setStatus('❌ Ошибка камеры: ' + err.message);
                 return false;
+            }
+        }
+
+        // Настройка обработки жестов
+        function setupGestureHandling() {
+            const wrapper = document.getElementById('videoWrapper');
+
+            // Обработка касаний для зума
+            wrapper.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2) {
+                    e.preventDefault();
+                    const touch1 = e.touches[0];
+                    const touch2 = e.touches[1];
+                    initialDistance = Math.hypot(
+                        touch2.clientX - touch1.clientX,
+                        touch2.clientY - touch1.clientY
+                    );
+                    initialZoom = currentZoom;
+                    video.classList.add('zooming');
+                }
+            });
+
+            wrapper.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 2) {
+                    e.preventDefault();
+                    const touch1 = e.touches[0];
+                    const touch2 = e.touches[1];
+                    const currentDistance = Math.hypot(
+                        touch2.clientX - touch1.clientX,
+                        touch2.clientY - touch1.clientY
+                    );
+
+                    // Рассчитываем новый зум
+                    const scale = currentDistance / initialDistance;
+                    let newZoom = initialZoom * scale;
+
+                    // Ограничиваем зум
+                    newZoom = Math.max(minZoom, Math.min(maxZoom, newZoom));
+
+                    // Применяем зум
+                    setZoom(newZoom);
+                }
+            });
+
+            wrapper.addEventListener('touchend', (e) => {
+                if (e.touches.length < 2) {
+                    video.classList.remove('zooming');
+                }
+            });
+        }
+
+        // Установка зума
+        function setZoom(zoom) {
+            currentZoom = Math.max(minZoom, Math.min(maxZoom, zoom));
+
+            // Применяем зум к видео
+            video.style.transform = `scale(${currentZoom})`;
+
+            // Обновляем UI
+            document.getElementById('zoomValue').textContent = currentZoom.toFixed(1) + 'x';
+            document.getElementById('zoomSlider').value = currentZoom;
+
+            // Пробуем использовать аппаратный зум
+            if (stream) {
+                const track = stream.getVideoTracks()[0];
+                if (track.getConstraints && track.applyConstraints) {
+                    track.applyConstraints({
+                        advanced: [{ zoom: currentZoom }]
+                    }).catch(() => {
+                        // Игнорируем ошибки, используем CSS зум
+                    });
+                }
             }
         }
 
@@ -311,24 +507,24 @@
         }
 
         // Обработка найденного QR
-        async function handleQRDetected(qrData) {
+        function handleQRDetected(qrData) {
             // Показываем результат
             const qrResult = document.getElementById('qrResult');
             qrResult.textContent = `✅ QR найден: ${qrData.substring(0, 50)}...`;
             qrResult.classList.add('active');
 
             // Отправляем в бота
-            sendToBot(qrData);
-
-            // Отправляем на сервер (для WebSocket)
-            await sendQRToServer(qrData);
+            sendDataToBot(qrData);
 
             // Останавливаем сканирование
             stopScanning();
+
+            // Показываем кнопку "Готово"
+            tg?.MainButton.show();
         }
 
-        // Отправка QR в бота
-        function sendToBot(qrText) {
+        // Отправка данных в бота
+        function sendDataToBot(qrData) {
             if (!tg) {
                 setStatus('❌ Telegram не инициализирован');
                 return;
@@ -336,32 +532,18 @@
 
             const payload = {
                 type: 'qr_scanned',
-                code: qrText,
-                session_id: sessionId,
-                timestamp: Date.now()
+                code: qrData,
+                timestamp: Date.now(),
+                source: 'camera'
             };
 
             tg.sendData(JSON.stringify(payload));
             setStatus('✅ QR отправлен в бота');
-
-            // Показываем главную кнопку
-            tg.MainButton.show();
-        }
-
-        // Отправка QR на сервер (для WebSocket)
-        async function sendQRToServer(qrData) {
-            try {
-                // Здесь можно добавить отправку на ваш сервер
-                // если нужна дополнительная обработка
-                console.log('QR data for server:', qrData);
-            } catch (err) {
-                console.error('Server send error:', err);
-            }
         }
 
         // Управление сканированием
         function startScanning() {
-            if (!video.srcObject) {
+            if (!stream) {
                 setStatus('❌ Камера не запущена');
                 return;
             }
@@ -369,7 +551,7 @@
             scanning = true;
             document.getElementById('startBtn').style.display = 'none';
             document.getElementById('stopBtn').style.display = 'block';
-            setStatus('🔍 Сканирование...');
+            setStatus('🔍 Сканирование... Наведите на QR');
 
             scanQR();
         }
@@ -386,19 +568,38 @@
             setStatus('⏹️ Сканирование остановлено');
         }
 
-        function closeScanner() {
-            // Останавливаем видео
-            if (video.srcObject) {
-                video.srcObject.getTracks().forEach(track => track.stop());
-            }
+        // Управление фонариком
+        async function toggleTorch() {
+            if (!stream || !torchSupported) return;
 
-            // Закрываем WebApp
-            if (tg) {
-                tg.close();
-            } else {
-                window.close();
+            try {
+                const track = stream.getVideoTracks()[0];
+                torchEnabled = !torchEnabled;
+
+                await track.applyConstraints({
+                    advanced: [{ torch: torchEnabled }]
+                });
+
+                document.getElementById('torchBtn').textContent =
+                    torchEnabled ? '🔦 Выкл' : '🔦 Фонарик';
+
+            } catch (err) {
+                console.error('Torch error:', err);
             }
         }
+
+        // Обработчики для кнопок зума
+        document.getElementById('zoomSlider').addEventListener('input', (e) => {
+            setZoom(parseFloat(e.target.value));
+        });
+
+        document.getElementById('zoomInBtn').addEventListener('click', () => {
+            setZoom(currentZoom + 0.2);
+        });
+
+        document.getElementById('zoomOutBtn').addEventListener('click', () => {
+            setZoom(currentZoom - 0.2);
+        });
 
         function setStatus(text) {
             document.getElementById('status').textContent = text;
@@ -416,8 +617,8 @@
 
         // Очистка при закрытии
         window.addEventListener('beforeunload', () => {
-            if (video.srcObject) {
-                video.srcObject.getTracks().forEach(track => track.stop());
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
             }
         });
     </script>
