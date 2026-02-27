@@ -1,779 +1,177 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>QR Scanner для РТУ МИРЭА</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>QR Scanner</title>
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--tg-theme-bg-color, #ffffff);
-            color: var(--tg-theme-text-color, #000000);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
 
-        .container {
-            padding: 16px;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            max-width: 600px;
-            margin: 0 auto;
-            width: 100%;
-        }
+<style>
+body {
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    margin: 0;
+    padding: 16px;
+    background: var(--tg-theme-bg-color, #fff);
+    color: var(--tg-theme-text-color, #000);
+}
 
-        h1 {
-            font-size: 24px;
-            margin-bottom: 16px;
-            color: var(--tg-theme-text-color, #000000);
-        }
+h2 { margin-bottom: 16px; }
 
-        .scanner-container {
-            width: 100%;
-            aspect-ratio: 1/1;
-            background-color: #000;
-            border-radius: 12px;
-            overflow: hidden;
-            margin-bottom: 16px;
-            position: relative;
-            border: 2px solid var(--tg-theme-button-color, #40a7e3);
-        }
+#reader {
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto 16px auto;
+    border-radius: 12px;
+    overflow: hidden;
+}
 
-        #reader {
-            width: 100% !important;
-            height: 100% !important;
-        }
+button {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 10px;
+    background: var(--tg-theme-button-color, #40a7e3);
+    color: var(--tg-theme-button-text-color, #fff);
+}
 
-        #reader video {
-            width: 100% !important;
-            height: 100% !important;
-            object-fit: cover !important;
-        }
+button.secondary {
+    background: #eee;
+    color: #000;
+}
 
-        .permission-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0,0,0,0.8);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            text-align: center;
-            padding: 20px;
-            z-index: 10;
-        }
-
-        .permission-overlay button {
-            background-color: var(--tg-theme-button-color, #40a7e3);
-            color: var(--tg-theme-button-text-color, #ffffff);
-            border: none;
-            padding: 12px 24px;
-            border-radius: 12px;
-            font-size: 16px;
-            margin-top: 16px;
-            cursor: pointer;
-        }
-
-        .status-panel {
-            background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 16px;
-        }
-
-        .status-title {
-            font-size: 14px;
-            opacity: 0.7;
-            margin-bottom: 4px;
-        }
-
-        .status-value {
-            font-size: 18px;
-            font-weight: 500;
-            word-break: break-all;
-        }
-
-        .status-value.success {
-            color: #00a86b;
-        }
-
-        .status-value.error {
-            color: #d32f2f;
-        }
-
-        .status-value.warning {
-            color: #ff9800;
-        }
-
-        .controls {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 16px;
-            flex-wrap: wrap;
-        }
-
-        button {
-            flex: 1;
-            padding: 14px;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: opacity 0.2s;
-            background-color: var(--tg-theme-button-color, #40a7e3);
-            color: var(--tg-theme-button-text-color, #ffffff);
-            min-width: 120px;
-        }
-
-        button:active {
-            opacity: 0.8;
-        }
-
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        button.secondary {
-            background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
-            color: var(--tg-theme-text-color, #000000);
-        }
-
-        .stats {
-            display: flex;
-            justify-content: space-between;
-            background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
-            border-radius: 12px;
-            padding: 12px;
-            font-size: 14px;
-            margin-bottom: 8px;
-        }
-
-        .scan-count {
-            font-weight: bold;
-            color: var(--tg-theme-button-color, #40a7e3);
-        }
-
-        .log {
-            margin-top: 16px;
-            max-height: 150px;
-            overflow-y: auto;
-            font-size: 12px;
-            background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
-            border-radius: 8px;
-            padding: 8px;
-            font-family: monospace;
-        }
-
-        .log-entry {
-            padding: 4px 0;
-            border-bottom: 1px solid rgba(0,0,0,0.1);
-        }
-
-        .log-entry:last-child {
-            border-bottom: none;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: var(--tg-theme-hint-color, #999);
-        }
-
-        .info-message {
-            background-color: #2196F3;
-            color: white;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            text-align: center;
-            font-weight: bold;
-            display: none;
-        }
-
-        .success-message {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            text-align: center;
-            font-weight: bold;
-        }
-
-        .error-message {
-            background-color: #f44336;
-            color: white;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            text-align: center;
-            font-weight: bold;
-        }
-
-        .warning-message {
-            background-color: #ff9800;
-            color: white;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            text-align: center;
-            font-weight: bold;
-        }
-
-        .debug-info {
-            font-size: 10px;
-            color: var(--tg-theme-hint-color, #999);
-            margin-top: 8px;
-            padding: 8px;
-            border-top: 1px solid rgba(0,0,0,0.1);
-        }
-    </style>
+.status {
+    margin-top: 10px;
+    font-size: 14px;
+    word-break: break-all;
+}
+</style>
 </head>
+
 <body>
-    <div class="container">
-        <h1>📸 Сканер QR-кодов РТУ МИРЭА</h1>
 
-        <div id="statusMessage" class="info-message"></div>
+<h2>📷 Сканирование QR</h2>
 
-        <div class="scanner-container">
-            <div id="reader">
-                <div style="color: white; text-align: center; padding: 20px; background: #333; height: 100%; display: flex; align-items: center; justify-content: center;">
-                    Нажмите "Начать" для запуска сканера
-                </div>
-            </div>
-            <div id="permissionOverlay" class="permission-overlay" style="display: none;">
-                <div>📷 Доступ к камере</div>
-                <div style="font-size: 14px; margin-top: 8px;">Нажмите кнопку ниже, чтобы разрешить доступ к камере</div>
-                <button onclick="requestCameraPermission()">Разрешить камеру</button>
-            </div>
-            <div id="loadingMessage" class="loading" style="display: none;">
-                ⏳ Загрузка библиотеки сканера...
-            </div>
-        </div>
+<div id="reader"></div>
 
-        <div class="status-panel">
-            <div class="status-title">Текущий статус</div>
-            <div class="status-value" id="status">Нажмите "Начать" для запуска сканера</div>
-        </div>
+<button onclick="startScanner()">▶️ Начать</button>
+<button class="secondary" onclick="stopScanner()">⏹️ Остановить</button>
+<button class="secondary" onclick="sendTest()">🔍 Тест</button>
 
-        <div class="controls">
-            <button id="startBtn" class="primary" onclick="handleStartClick()">▶ Начать</button>
-            <button id="stopBtn" class="secondary" onclick="stopScanner()" disabled>⏹ Остановить</button>
-            <button id="testBtn" class="secondary" onclick="testConnection()">🔍 Тест связи</button>
-        </div>
+<div class="status" id="status"></div>
 
-        <div class="stats">
-            <span>Сканировано: <span id="scanCount" class="scan-count">0</span></span>
-            <span>Отправлено: <span id="sentCount" class="scan-count">0</span></span>
-        </div>
+<script>
+let tg = null;
+let html5QrCode = null;
+let isScanning = false;
 
-        <div class="log" id="log"></div>
+const statusEl = document.getElementById("status");
 
-        <div class="debug-info" id="debugInfo">
-            Telegram WebApp: <span id="tgStatus">❌ не инициализирован</span><br>
-            Библиотека: <span id="libStatus">❌ не загружена</span><br>
-            Камера: <span id="cameraStatus">❌ не проверена</span><br>
-            URL: <span id="urlInfo"></span>
-        </div>
-    </div>
+// ========================================
+// TELEGRAM INIT
+// ========================================
+function initTelegram() {
+    // ИСПРАВЛЕНО: Добавлен оператор || для проверки
+    if (!window.Telegram || !window.Telegram.WebApp) {
+        setStatus("❌ Откройте страницу через Telegram бота");
+        return false;
+    }
 
-    <script>
-        // ============================================
-        // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
-        // ============================================
-        console.log('🚀 Запуск scanner.html на GitHub Pages');
+    tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
 
-        let tg = null;
-        let html5QrCode = null;
-        let isScanning = false;
-        let scanCount = 0;
-        let sentCount = 0;
-        let lastScannedCode = '';
-        let lastScanTime = 0;
-        const SCAN_COOLDOWN = 3000;
+    // ИСПРАВЛЕНО: Добавлен оператор || для проверки
+    if (!tg.initData || tg.initData.length === 0) {
+        setStatus("❌ Страница открыта не как WebApp (нужно открыть кнопкой в боте)");
+        return false;
+    }
 
-        // Источники для загрузки библиотеки (по порядку)
-        const LIBRARY_SOURCES = [
-            'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/minified/html5-qrcode.min.js',
-            'https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js',
-            'https://cdn.jsdelivr.net/gh/mebjas/html5-qrcode@2.3.8/minified/html5-qrcode.min.js'
-        ];
+    setStatus("✅ Telegram WebApp подключён");
+    return true;
+}
 
-        // Элементы DOM
-        const statusEl = document.getElementById('status');
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const testBtn = document.getElementById('testBtn');
-        const scanCountEl = document.getElementById('scanCount');
-        const sentCountEl = document.getElementById('sentCount');
-        const logEl = document.getElementById('log');
-        const permissionOverlay = document.getElementById('permissionOverlay');
-        const loadingMessage = document.getElementById('loadingMessage');
-        const statusMessage = document.getElementById('statusMessage');
-        const tgStatusEl = document.getElementById('tgStatus');
-        const libStatusEl = document.getElementById('libStatus');
-        const cameraStatusEl = document.getElementById('cameraStatus');
-        const urlInfoEl = document.getElementById('urlInfo');
+function setStatus(text) {
+    statusEl.textContent = text;
+}
 
-        // Показываем URL
-        urlInfoEl.textContent = window.location.href;
+// ========================================
+// SEND DATA
+// ========================================
+function sendToBot(qrText) {
+    if (!tg && !initTelegram()) return;
 
-        // ============================================
-        // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-        // ============================================
+    const payload = {
+        type: "qr_scanned",
+        code: qrText,
+        timestamp: Date.now()
+    };
 
-        function showMessage(text, type = 'info') {
-            statusMessage.textContent = text;
-            statusMessage.className = type + '-message';
-            statusMessage.style.display = 'block';
+    tg.sendData(JSON.stringify(payload));
+    setStatus("✅ QR отправлен в бота");
+}
 
-            setTimeout(() => {
-                statusMessage.style.display = 'none';
-            }, 5000);
-        }
+function sendTest() {
+    if (!tg && !initTelegram()) return;
 
-        function addToLog(message, type = 'info') {
-            const entry = document.createElement('div');
-            entry.className = 'log-entry';
-            const time = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            entry.textContent = `[${time}] ${message}`;
+    tg.sendData(JSON.stringify({
+        type: "test",
+        message: "Test OK",
+        timestamp: Date.now()
+    }));
 
-            if (type === 'success') entry.style.color = '#00a86b';
-            if (type === 'error') entry.style.color = '#d32f2f';
-            if (type === 'warning') entry.style.color = '#ff9800';
+    setStatus("✅ Тест отправлен");
+}
 
-            logEl.appendChild(entry);
-            logEl.scrollTop = logEl.scrollHeight;
+// ========================================
+// SCANNER
+// ========================================
+function startScanner() {
+    if (isScanning) return;
 
-            if (logEl.children.length > 30) {
-                logEl.removeChild(logEl.children[0]);
-            }
+    if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
+    }
 
-            console.log(`[${time}] ${message}`);
-        }
-
-        function setStatus(text, type = 'info') {
-            statusEl.textContent = text;
-            statusEl.className = 'status-value ' + type;
-        }
-
-        // ============================================
-        // ИНИЦИАЛИЗАЦИЯ TELEGRAM
-        // ============================================
-
-        function initTelegram() {
-            try {
-                if (window.Telegram && window.Telegram.WebApp) {
-                    tg = window.Telegram.WebApp;
-                    tg.ready();
-                    tg.expand();
-
-                    console.log('✅ Telegram WebApp инициализирован:', {
-                        version: tg.version,
-                        initData: tg.initData ? 'есть' : 'нет',
-                        platform: tg.platform,
-                        colorScheme: tg.colorScheme
-                    });
-
-                    tgStatusEl.textContent = '✅ OK (v' + tg.version + ')';
-                    addToLog('✅ Telegram WebApp подключен', 'success');
-
-                    if (tg.initData) {
-                        addToLog('ℹ️ initData присутствует', 'info');
-                    } else {
-                        addToLog('⚠️ initData отсутствует - возможно WebApp открыт вне Telegram', 'warning');
-                    }
-
-                    return true;
-                } else {
-                    console.error('❌ Telegram WebApp не найден');
-                    tgStatusEl.textContent = '❌ не найден';
-                    addToLog('❌ Telegram WebApp не доступен', 'error');
-                    showMessage('❌ Откройте этот сайт через Telegram бота', 'error');
-                    return false;
-                }
-            } catch (e) {
-                console.error('❌ Ошибка инициализации Telegram:', e);
-                tgStatusEl.textContent = '❌ ошибка';
-                addToLog(`❌ Ошибка Telegram: ${e.message}`, 'error');
-                return false;
-            }
-        }
-
-        // ============================================
-        // ПРОВЕРКА КАМЕРЫ
-        // ============================================
-
-        async function checkCameraSupport() {
-            try {
-                if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-                    cameraStatusEl.textContent = '❌ не поддерживается';
-                    return false;
-                }
-
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                const videoDevices = devices.filter(d => d.kind === 'videoinput');
-
-                cameraStatusEl.textContent = `📷 ${videoDevices.length} камер`;
-                addToLog(`📷 Найдено камер: ${videoDevices.length}`, 'info');
-
-                if (videoDevices.length === 0) {
-                    setStatus('❌ Камера не найдена', 'error');
-                    return false;
-                }
-
-                return true;
-            } catch (e) {
-                console.error('Ошибка проверки камер:', e);
-                cameraStatusEl.textContent = '❌ ошибка';
-                return false;
-            }
-        }
-
-        // ============================================
-        // ЗАГРУЗКА БИБЛИОТЕКИ
-        // ============================================
-
-        function loadHtml5Qrcode() {
-            return new Promise((resolve, reject) => {
-                if (typeof Html5Qrcode !== 'undefined') {
-                    console.log('✅ Библиотека уже загружена');
-                    libStatusEl.textContent = '✅ загружена';
-                    resolve();
-                    return;
-                }
-
-                loadingMessage.style.display = 'block';
-                addToLog('📥 Загрузка библиотеки сканера...', 'info');
-                console.log('📥 Начинаем загрузку библиотеки...');
-
-                let currentSourceIndex = 0;
-
-                function tryLoadSource() {
-                    if (currentSourceIndex >= LIBRARY_SOURCES.length) {
-                        loadingMessage.style.display = 'none';
-                        libStatusEl.textContent = '❌ ошибка';
-                        addToLog('❌ Не удалось загрузить библиотеку', 'error');
-                        showMessage('❌ Ошибка загрузки сканера', 'error');
-                        reject(new Error('All sources failed'));
-                        return;
-                    }
-
-                    const src = LIBRARY_SOURCES[currentSourceIndex];
-                    console.log(`📥 Попытка ${currentSourceIndex + 1} из ${LIBRARY_SOURCES.length}: ${src}`);
-
-                    const script = document.createElement('script');
-                    script.src = src;
-                    script.onload = () => {
-                        console.log(`✅ Библиотека загружена из источника ${currentSourceIndex + 1}`);
-                        loadingMessage.style.display = 'none';
-                        libStatusEl.textContent = '✅ загружена';
-                        addToLog('✅ Библиотека сканера загружена', 'success');
-                        showMessage('✅ Сканер готов к работе', 'success');
-                        resolve();
-                    };
-                    script.onerror = () => {
-                        console.log(`❌ Не удалось загрузить из источника ${currentSourceIndex + 1}`);
-                        currentSourceIndex++;
-                        tryLoadSource();
-                    };
-                    document.head.appendChild(script);
-                }
-
-                tryLoadSource();
-            });
-        }
-
-        // ============================================
-        // ФУНКЦИИ СКАНЕРА
-        // ============================================
-
-        function onScanSuccess(decodedText, decodedResult) {
-            const now = Date.now();
-
-            if (decodedText === lastScannedCode && (now - lastScanTime) < SCAN_COOLDOWN) {
-                return;
-            }
-
-            scanCount++;
-            scanCountEl.textContent = scanCount;
-            lastScannedCode = decodedText;
-            lastScanTime = now;
-
-            const shortCode = decodedText.length > 30 ? decodedText.substring(0, 30) + '...' : decodedText;
-            addToLog(`📸 Найден QR: ${shortCode}`, 'success');
-            setStatus('✅ Код найден, отправка...', 'success');
-
+    // ИСПРАВЛЕНО: Удалена лишняя стрелочная функция, которая не возвращала значение и вызывала ошибку
+    html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        (decodedText) => {
             sendToBot(decodedText);
+        },
+        (error) => {
+            // Можно оставить пустым или добавить логирование, если нужно
+            // console.warn(error);
         }
+    ).then(() => {
+        isScanning = true;
+        setStatus("🔍 Сканирование...");
+    }).catch(err => {
+        setStatus("❌ Ошибка камеры: " + err);
+    });
+}
 
-        function onScanError(errorMessage) {
-            if (errorMessage.includes('NotFound')) {
-                setStatus('❌ Камера не найдена', 'error');
-                return;
-            }
-            if (errorMessage.includes('NotAllowed')) {
-                permissionOverlay.style.display = 'flex';
-                setStatus('❌ Нет доступа к камере', 'error');
-                addToLog('❌ Доступ к камере запрещен', 'error');
-            }
-            if (errorMessage.includes('NotReadable')) {
-                setStatus('❌ Камера занята', 'error');
-                addToLog('❌ Камера используется другим приложением', 'error');
-            }
-        }
+function stopScanner() {
+    if (!isScanning || !html5QrCode) return;
 
-        window.requestCameraPermission = function() {
-            permissionOverlay.style.display = 'none';
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-                .then(function(stream) {
-                    stream.getTracks().forEach(track => track.stop());
-                    addToLog('✅ Доступ к камере получен', 'success');
-                    showMessage('✅ Доступ к камере разрешен', 'success');
-                    startScanner();
-                })
-                .catch(function(err) {
-                    addToLog(`❌ Ошибка доступа: ${err.message}`, 'error');
-                    setStatus('❌ Нет доступа к камере', 'error');
-                    showMessage('❌ Не удалось получить доступ к камере', 'error');
-                    permissionOverlay.style.display = 'flex';
-                });
-        };
+    html5QrCode.stop().then(() => {
+        isScanning = false;
+        setStatus("⏹️ Сканирование остановлено");
+    });
+}
 
-        function startScanner() {
-            if (isScanning) return;
+// ========================================
+// START
+// ========================================
+document.addEventListener("DOMContentLoaded", () => {
+    initTelegram();
+});
+</script>
 
-            if (!html5QrCode) {
-                try {
-                    html5QrCode = new Html5Qrcode("reader");
-                } catch (e) {
-                    addToLog(`❌ Ошибка создания сканера: ${e.message}`, 'error');
-                    return;
-                }
-            }
-
-            const config = {
-                fps: 10,
-                qrbox: { width: 250, height: 250 },
-                aspectRatio: 1.0,
-                showTorchButtonIfSupported: true,
-                showZoomSliderIfSupported: true,
-                defaultZoomValueIfSupported: 1
-            };
-
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-                .then(function(stream) {
-                    stream.getTracks().forEach(track => track.stop());
-                    return html5QrCode.start(
-                        { facingMode: "environment" },
-                        config,
-                        onScanSuccess,
-                        onScanError
-                    );
-                })
-                .then(() => {
-                    isScanning = true;
-                    startBtn.disabled = true;
-                    stopBtn.disabled = false;
-                    permissionOverlay.style.display = 'none';
-                    addToLog('✅ Сканер запущен', 'success');
-                    setStatus('🔍 Сканирование...', 'info');
-                    showMessage('✅ Сканер запущен, наведите на QR-код', 'success');
-                })
-                .catch((err) => {
-                    console.error('Ошибка запуска:', err);
-                    addToLog(`❌ Ошибка запуска: ${err}`, 'error');
-                    setStatus('❌ Ошибка запуска', 'error');
-
-                    if (err.toString().includes('NotAllowed')) {
-                        permissionOverlay.style.display = 'flex';
-                    } else if (err.toString().includes('NotFound')) {
-                        setStatus('❌ Камера не найдена', 'error');
-                        addToLog('❌ На устройстве не найдена камера', 'error');
-                        showMessage('❌ Камера не найдена на устройстве', 'error');
-                    }
-                });
-        }
-
-        window.stopScanner = function() {
-            if (!isScanning || !html5QrCode) return;
-
-            html5QrCode.stop().then(() => {
-                isScanning = false;
-                startBtn.disabled = false;
-                stopBtn.disabled = true;
-                addToLog('⏹ Сканер остановлен', 'info');
-                setStatus('⏹ Остановлено', 'info');
-                showMessage('⏹ Сканер остановлен', 'info');
-            }).catch((err) => {
-                addToLog(`❌ Ошибка остановки: ${err}`, 'error');
-            });
-        };
-
-        window.handleStartClick = async function() {
-            try {
-                await loadHtml5Qrcode();
-                const hasCamera = await checkCameraSupport();
-                if (hasCamera) {
-                    startScanner();
-                } else {
-                    showMessage('❌ Камера не найдена на устройстве', 'error');
-                }
-            } catch (e) {
-                addToLog(`❌ Ошибка загрузки: ${e.message}`, 'error');
-                showMessage(`❌ Ошибка: ${e.message}`, 'error');
-            }
-        };
-
-        // ============================================
-        // ОТПРАВКА ДАННЫХ В БОТА
-        // ============================================
-
-        function sendToBot(data) {
-            try {
-                if (!tg) {
-                    addToLog('❌ Telegram не инициализирован', 'error');
-
-                    if (!initTelegram()) {
-                        setStatus('❌ Ошибка: нет Telegram', 'error');
-                        showMessage('❌ Не удалось подключиться к Telegram', 'error');
-                        return false;
-                    }
-                }
-
-                if (!tg.sendData) {
-                    addToLog('❌ Метод sendData не доступен', 'error');
-                    setStatus('❌ Ошибка: WebApp не в Telegram', 'error');
-                    showMessage('❌ Откройте этот сайт через Telegram бота', 'error');
-                    return false;
-                }
-
-                const message = JSON.stringify({
-                    type: 'qr_scanned',
-                    code: data,
-                    timestamp: Date.now()
-                });
-
-                console.log('📤 Отправка в бота:', message);
-                addToLog(`📤 Отправка: ${data.substring(0, 30)}...`, 'info');
-
-                tg.sendData(message);
-
-                sentCount++;
-                sentCountEl.textContent = sentCount;
-
-                addToLog(`✅ Код отправлен в бот`, 'success');
-                setStatus('✅ Код отправлен!', 'success');
-                showMessage('✅ QR код успешно отправлен!', 'success');
-
-                if (tg.showAlert) {
-                    tg.showAlert('✅ QR код отправлен!');
-                }
-
-                return true;
-            } catch (e) {
-                console.error('❌ Ошибка отправки:', e);
-                addToLog(`❌ Ошибка отправки: ${e.message}`, 'error');
-                setStatus('❌ Ошибка отправки', 'error');
-                showMessage(`❌ Ошибка: ${e.message}`, 'error');
-                return false;
-            }
-        }
-
-        // ============================================
-        // ТЕСТОВАЯ ФУНКЦИЯ
-        // ============================================
-
-        window.testConnection = function() {
-            addToLog('🔍 Запуск теста связи...', 'info');
-            console.log('🔍 Нажата кнопка теста');
-
-            try {
-                if (!tg) {
-                    if (!initTelegram()) {
-                        addToLog('❌ Telegram не доступен', 'error');
-                        showMessage('❌ Telegram не доступен', 'error');
-                        return;
-                    }
-                }
-
-                if (!tg.sendData) {
-                    addToLog('❌ sendData не доступен', 'error');
-                    showMessage('❌ Откройте сайт через Telegram бота', 'error');
-                    return;
-                }
-
-                const testData = JSON.stringify({
-                    type: 'test',
-                    message: 'Тестовое сообщение от GitHub Pages',
-                    timestamp: Date.now(),
-                    url: window.location.href,
-                    userAgent: navigator.userAgent,
-                    platform: tg.platform || 'unknown'
-                });
-
-                console.log('📤 Отправка теста:', testData);
-                tg.sendData(testData);
-
-                addToLog('✅ Тестовое сообщение отправлено', 'success');
-                setStatus('✅ Тест отправлен!', 'success');
-                showMessage('✅ Тест отправлен! Проверьте бота.', 'success');
-
-            } catch (e) {
-                console.error('❌ Ошибка теста:', e);
-                addToLog(`❌ Ошибка теста: ${e.message}`, 'error');
-                showMessage(`❌ Ошибка: ${e.message}`, 'error');
-            }
-        };
-
-        // ============================================
-        // ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ
-        // ============================================
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            console.log('📄 DOM загружен');
-
-            // Инициализируем Telegram
-            initTelegram();
-
-            // Проверяем камеру
-            await checkCameraSupport();
-
-            // Предзагружаем библиотеку
-            try {
-                await loadHtml5Qrcode();
-            } catch (e) {
-                console.log('Предзагрузка не удалась, будет загружена при нажатии');
-            }
-
-            addToLog('✅ Приложение загружено', 'success');
-            showMessage('✅ Сканер готов к работе', 'success');
-
-            // Обработчик ошибок
-            window.addEventListener('error', function(e) {
-                addToLog(`❌ Ошибка: ${e.message}`, 'error');
-                console.error('Глобальная ошибка:', e);
-            });
-        });
-
-        // Делаем функции глобальными
-        window.sendToBot = sendToBot;
-    </script>
 </body>
 </html>
