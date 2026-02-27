@@ -7,100 +7,65 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body style="font-family: sans-serif; text-align: center; padding: 20px; background: #f0f0f0;">
-    <h1>📷 QR Scanner Debug</h1>
+    <h1>📷 QR Scanner</h1>
     
-    <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; text-align: left;">
-        <h3>📊 Статус:</h3>
-        <div id="status" style="color: #666; margin: 10px 0;">Проверка...</div>
-        <div id="debug" style="background: #000; color: #0f0; padding: 10px; border-radius: 5px; font-size: 12px; height: 100px; overflow: auto;"></div>
+    <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+        <h3>⚠️ Важно!</h3>
+        <p id="warning" style="color: red; font-weight: bold;">Проверка...</p>
     </div>
     
-    <button onclick="sendTest()" style="padding: 20px; font-size: 20px; background: #40a7e3; color: white; border: none; border-radius: 10px; width: 100%; margin-bottom: 10px; cursor: pointer;">
-        📤 1. Отправить тест
+    <button onclick="sendTest()" style="padding: 20px; font-size: 20px; background: #40a7e3; color: white; border: none; border-radius: 10px; width: 100%; margin-bottom: 10px;">
+        📤 Отправить тест
     </button>
     
-    <button onclick="checkTelegram()" style="padding: 15px; font-size: 16px; background: #34c759; color: white; border: none; border-radius: 10px; width: 100%; cursor: pointer;">
-        🔍 2. Проверить Telegram
-    </button>
+    <div id="debug" style="background: #000; color: #0f0; padding: 10px; border-radius: 5px; font-size: 12px; text-align: left; height: 200px; overflow: auto;"></div>
 
     <script>
-        // Функция для добавления отладочной информации
-        function addDebug(text, isError = false) {
-            const debug = document.getElementById('debug');
-            const time = new Date().toLocaleTimeString();
-            const color = isError ? '#ff6b6b' : '#0f0';
-            debug.innerHTML += `<span style="color: ${color}">[${time}] ${text}</span><br>`;
-            debug.scrollTop = debug.scrollHeight;
+        const debug = document.getElementById('debug');
+        const warning = document.getElementById('warning');
+        
+        function addDebug(text) {
+            debug.innerHTML += `[${new Date().toLocaleTimeString()}] ${text}<br>`;
             console.log(text);
         }
 
-        // Проверка Telegram
-        function checkTelegram() {
-            addDebug('🔍 Проверка Telegram...');
+        // Проверяем, открыто ли в Telegram
+        if (window.Telegram && window.Telegram.WebApp) {
+            const tg = window.Telegram.WebApp;
             
-            if (window.Telegram) {
-                addDebug('✅ window.Telegram существует');
+            if (tg.initData) {
+                warning.innerHTML = '✅ Открыто в Telegram';
+                warning.style.color = 'green';
+                addDebug('✅ Есть initData - можно отправлять');
                 
-                if (window.Telegram.WebApp) {
-                    addDebug('✅ window.Telegram.WebApp существует');
-                    addDebug(`initData: ${window.Telegram.WebApp.initData ? 'есть' : 'нет'}`);
-                    addDebug(`initDataUnsafe: ${window.Telegram.WebApp.initDataUnsafe ? 'есть' : 'нет'}`);
-                    addDebug(`version: ${window.Telegram.WebApp.version}`);
-                } else {
-                    addDebug('❌ window.Telegram.WebApp отсутствует', true);
-                }
-            } else {
-                addDebug('❌ window.Telegram отсутствует', true);
-            }
-        }
-
-        // Инициализация
-        let tg = null;
-        try {
-            addDebug('🚀 Инициализация...');
-            
-            if (window.Telegram && window.Telegram.WebApp) {
-                tg = window.Telegram.WebApp;
                 tg.ready();
                 tg.expand();
                 
-                addDebug('✅ Telegram.WebApp инициализирован');
-                addDebug(`Версия: ${tg.version}`);
-                addDebug(`initData: ${tg.initData ? 'есть' : 'нет'}`);
-                
-                document.getElementById('status').innerHTML = '✅ Telegram готов';
+                function sendTest() {
+                    try {
+                        addDebug('📤 Отправка теста...');
+                        tg.sendData('test_message_123');
+                        addDebug('✅ Отправлено!');
+                    } catch (e) {
+                        addDebug('❌ Ошибка: ' + e.message);
+                    }
+                }
             } else {
-                throw new Error('Telegram WebApp не найден');
+                warning.innerHTML = '❌ Открыто НЕ в Telegram (нет initData)';
+                warning.style.color = 'red';
+                addDebug('❌ Нет initData - это браузер, а не Telegram');
+                
+                function sendTest() {
+                    alert('Это тест в браузере. Откройте через Telegram бота!');
+                }
             }
-        } catch (e) {
-            addDebug(`❌ Ошибка: ${e.message}`, true);
-            document.getElementById('status').innerHTML = '❌ Ошибка инициализации';
-        }
-
-        // Отправка теста
-        function sendTest() {
-            addDebug('📤 Нажата кнопка отправки');
+        } else {
+            warning.innerHTML = '❌ Telegram WebApp не найден';
+            warning.style.color = 'red';
+            addDebug('❌ Telegram WebApp не найден');
             
-            if (!tg) {
-                addDebug('❌ Telegram не инициализирован', true);
-                document.getElementById('status').innerHTML = '❌ Telegram не инициализирован';
-                return;
-            }
-            
-            try {
-                // Пробуем отправить простую строку
-                const testString = 'test_message_123';
-                addDebug(`📤 Отправляем: "${testString}"`);
-                
-                tg.sendData(testString);
-                
-                addDebug('✅ sendData() выполнен без ошибок');
-                document.getElementById('status').innerHTML = '✅ Данные отправлены!';
-                
-            } catch (e) {
-                addDebug(`❌ Ошибка отправки: ${e.message}`, true);
-                addDebug(`Стек: ${e.stack}`, true);
-                document.getElementById('status').innerHTML = `❌ Ошибка: ${e.message}`;
+            function sendTest() {
+                alert('Telegram WebApp не найден!');
             }
         }
     </script>
