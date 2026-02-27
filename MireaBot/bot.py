@@ -171,7 +171,7 @@ async def handle_web_app_data(message: Message):
     user_id = message.from_user.id
     web_app_data = message.web_app_data
 
-    # Подробное логирование
+    # ПОДРОБНОЕ ЛОГИРОВАНИЕ
     logger.info("=" * 60)
     logger.info(f"📱 ПОЛУЧЕНЫ ДАННЫЕ ОТ WEBAPP!")
     logger.info(f"User ID: {user_id}")
@@ -182,7 +182,7 @@ async def handle_web_app_data(message: Message):
     logger.info(f"Data length: {len(web_app_data.data) if web_app_data.data else 0}")
     logger.info("=" * 60)
 
-    # Отправляем подтверждение
+    # Отправляем подтверждение пользователю
     await message.answer(f"✅ Данные получены! Длина: {len(web_app_data.data)} символов")
 
     try:
@@ -190,65 +190,30 @@ async def handle_web_app_data(message: Message):
         data = json.loads(web_app_data.data)
         logger.info(f"Parsed JSON: {json.dumps(data, indent=2, ensure_ascii=False)}")
 
+        # Проверяем тип данных
         if isinstance(data, dict):
             data_type = data.get("type")
 
             if data_type == "qr_scanned":
-                qr_code = data.get("code")
+                qr_code = data.get("code") or data.get("qr")
 
                 if qr_code:
                     logger.info(f"✅ QR код получен: {qr_code[:100]}...")
+                    await message.answer(f"✅ QR-код: {qr_code[:50]}...")
 
-                    status_msg = await message.answer(
-                        "✅ **QR-код получен!**\n\n🔄 Отмечаю студентов...",
-                        parse_mode="Markdown"
-                    )
-
-                    try:
-                        # Отправляем отметку для всех студентов
-                        result = await mark_all_students(qr_code)
-
-                        # Формируем результат
-                        result_text = (
-                            f"📊 **РЕЗУЛЬТАТЫ ОТМЕТКИ**\n\n"
-                            f"👥 **Всего студентов:** {result.get('total', 0)}\n"
-                            f"✅ **Отмечены:** {result.get('success', 0)}\n"
-                        )
-
-                        if result.get('already_marked', 0) > 0:
-                            result_text += f"🔄 **Уже отмечены:** {result['already_marked']}\n"
-
-                        if result.get('need_reauth', 0) > 0:
-                            result_text += f"⚠️ **Нужна переавторизация:** {result['need_reauth']}\n"
-                            if result.get('need_reauth_list'):
-                                names = [s['name'] for s in result['need_reauth_list']]
-                                result_text += f"└ {', '.join(names)}\n"
-
-                        await status_msg.edit_text(result_text, parse_mode="Markdown")
-
-                    except Exception as e:
-                        logger.error(f"Error marking students: {e}")
-                        await status_msg.edit_text(f"❌ Ошибка при отметке: {str(e)}")
-
+                    # Здесь ваша логика отметки
+                    # ...
             elif data_type == "test":
-                await message.answer(
-                    f"✅ **Тест получен!**\n\n"
-                    f"Сообщение: {data.get('message', 'пусто')}"
-                )
+                await message.answer(f"✅ Тест получен! Сообщение: {data.get('message')}")
             else:
                 await message.answer(f"ℹ️ Получены данные типа: {data_type}")
 
     except json.JSONDecodeError as e:
         logger.error(f"JSON decode error: {e}")
-        await message.answer(
-            f"❌ **Ошибка формата данных**\n\n"
-            f"Текст: `{web_app_data.data[:200]}`\n"
-            f"Ошибка: {e}"
-        )
+        await message.answer(f"❌ Ошибка формата: {e}")
     except Exception as e:
         logger.error(f"Error processing webapp data: {e}")
-        await message.answer(f"❌ **Ошибка обработки:** {str(e)}")
-
+        await message.answer(f"❌ Ошибка: {str(e)}")
 
 # ============================================
 # ОСТАЛЬНЫЕ ОБРАБОТЧИКИ (без изменений)
