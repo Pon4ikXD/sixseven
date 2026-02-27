@@ -1,148 +1,350 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR Scanner</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <style>
-        body {
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
             background: #000;
             color: #fff;
-            font-family: sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
-        
+
+        .video-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: #1a1a1a;
+        }
+
         #video {
             width: 100%;
-            height: 100vh;
+            height: 100%;
             object-fit: cover;
         }
-        
-        #result {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.8);
-            color: #fff;
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-            font-size: 14px;
-            z-index: 1000;
+
+        .scan-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
         }
-        
-        #sendButton {
-            position: fixed;
-            bottom: 100px;
-            left: 20px;
-            right: 20px;
+
+        .scan-frame {
+            width: 250px;
+            height: 250px;
+            border: 2px solid #40a7e3;
+            border-radius: 20px;
+            box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.5);
+        }
+
+        .controls {
+            background: #1a1a1a;
+            padding: 16px;
+            border-top: 1px solid #333;
+        }
+
+        .status {
+            text-align: center;
+            margin-bottom: 12px;
+            color: #888;
+            font-size: 14px;
+        }
+
+        .button {
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
             background: #40a7e3;
             color: white;
-            border: none;
-            padding: 20px;
-            border-radius: 15px;
-            font-size: 20px;
-            font-weight: bold;
             cursor: pointer;
-            z-index: 1000;
+            transition: opacity 0.2s;
+            margin-bottom: 8px;
+        }
+
+        .button:active {
+            opacity: 0.8;
+        }
+
+        .button.stop {
+            background: #ff3b30;
+        }
+
+        .result {
+            background: #1a4d1a;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+            font-size: 12px;
+            word-break: break-all;
             display: none;
+        }
+
+        .result.active {
+            display: block;
+        }
+
+        .debug {
+            background: #333;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            color: #0f0;
+            margin-top: 8px;
+            max-height: 100px;
+            overflow: auto;
+            display: none; /* Скрываем для пользователя, но можно включить для отладки */
         }
     </style>
 </head>
 <body>
-    <video id="video" playsinline></video>
-    <canvas id="canvas" style="display: none;"></canvas>
-    
-    <div id="sendButton" onclick="sendToBot()">📤 Отправить QR в бота</div>
-    <div id="result">⏳ Запуск камеры...</div>
+    <div class="video-container">
+        <video id="video" playsinline></video>
+        <div class="scan-overlay">
+            <div class="scan-frame"></div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="status" id="status">⏳ Запуск камеры...</div>
+
+        <!-- Только одна кнопка для сканирования -->
+        <button class="button" id="scanBtn" onclick="startScan()">▶️ Начать сканирование</button>
+        <button class="button stop" id="stopBtn" onclick="stopScan()" style="display: none;">⏹️ Остановить</button>
+
+        <div class="result" id="result"></div>
+        <!-- <div class="debug" id="debug"></div> --> <!-- Закомментировано для продакшена -->
+    </div>
 
     <script>
-        let tg = null;
-        let lastQRCode = null;
-        
         // Инициализация Telegram
+        let tg = null;
         try {
             if (window.Telegram && window.Telegram.WebApp) {
                 tg = window.Telegram.WebApp;
                 tg.ready();
-                console.log('Telegram готов');
-            }
-        } catch (e) {
-            console.error('Ошибка Telegram:', e);
-        }
-
-        // Запуск камеры
-        async function startCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment' }
+                tg.expand();
+                
+                // ВАЖНО: Устанавливаем цвет кнопок в тему Telegram
+                tg.MainButton.setParams({
+                    text: 'СКАНИРОВАТЬ QR',
+                    color: '#40a7e3',
+                    text_color: '#ffffff'
                 });
                 
-                const video = document.getElementById('video');
+                console.log('✅ Telegram инициализирован');
+            } else {
+                console.error('❌ Telegram WebApp не найден');
+                alert('Ошибка: Telegram WebApp не инициализирован. Откройте через бота.');
+            }
+        } catch (e) {
+            console.error('❌ Ошибка Telegram:', e);
+        }
+
+        const video = document.getElementById('video');
+        const statusEl = document.getElementById('status');
+        const scanBtn = document.getElementById('scanBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const resultEl = document.getElementById('result');
+
+        let stream = null;
+        let scanning = false;
+        let scanInterval = null;
+
+        // Запуск камеры
+        async function initCamera() {
+            try {
+                statusEl.textContent = '⏳ Запрос доступа к камере...';
+
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+
                 video.srcObject = stream;
                 await video.play();
-                
-                document.getElementById('result').innerHTML = '✅ Камера запущена<br>Наведите на QR код';
-                
-                // Запускаем сканирование
-                setInterval(scanQR, 1000);
-                
+
+                statusEl.textContent = '✅ Камера готова. Нажмите "Начать сканирование"';
+                scanBtn.disabled = false;
+
             } catch (err) {
-                document.getElementById('result').innerHTML = '❌ Ошибка камеры: ' + err.message;
+                statusEl.textContent = '❌ Ошибка камеры: ' + err.message;
+                console.error('Camera error:', err);
+                
+                // Показываем инструкцию при ошибке
+                if (err.name === 'NotAllowedError') {
+                    statusEl.textContent = '❌ Доступ к камере запрещен. Разрешите в настройках браузера.';
+                } else if (err.name === 'NotFoundError') {
+                    statusEl.textContent = '❌ Камера не найдена на устройстве';
+                }
+            }
+        }
+
+        // Начать сканирование
+        function startScan() {
+            if (!stream) {
+                initCamera();
+                return;
+            }
+
+            scanning = true;
+            scanBtn.style.display = 'none';
+            stopBtn.style.display = 'block';
+            statusEl.textContent = '🔍 Сканирование... Наведите на QR-код';
+
+            scanInterval = setInterval(scanQR, 300); // Увеличили частоту сканирования
+        }
+
+        // Остановить сканирование
+        function stopScan() {
+            scanning = false;
+            scanBtn.style.display = 'block';
+            stopBtn.style.display = 'none';
+            statusEl.textContent = '⏹️ Сканирование остановлено';
+
+            if (scanInterval) {
+                clearInterval(scanInterval);
             }
         }
 
         // Сканирование QR
         function scanQR() {
-            const video = document.getElementById('video');
-            if (!video.videoWidth) return;
-            
-            const canvas = document.getElementById('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const code = jsQR(imageData.data, canvas.width, canvas.height);
-            
-            if (code) {
-                lastQRCode = code.data;
-                document.getElementById('sendButton').style.display = 'block';
-                document.getElementById('result').innerHTML = '✅ QR найден!<br>' + code.data.substring(0, 50) + '...';
-            }
-        }
+            if (!scanning || !video.videoWidth) return;
 
-        // Отправка в бота
-        function sendToBot() {
-            if (!lastQRCode) return;
-            
-            if (tg) {
-                // Пытаемся отправить через Telegram
-                tg.sendData(JSON.stringify({
-                    type: 'qr_scanned',
-                    code: lastQRCode,
-                    timestamp: Date.now()
-                }));
-                
-                document.getElementById('result').innerHTML = '✅ Отправлено в бота!';
-                document.getElementById('sendButton').style.display = 'none';
-            } else {
-                // Если Telegram не работает - копируем в буфер
-                navigator.clipboard.writeText(lastQRCode).then(() => {
-                    document.getElementById('result').innerHTML = '✅ QR скопирован! Отправьте боту';
-                    document.getElementById('sendButton').style.display = 'none';
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, canvas.width, canvas.height, {
+                    inversionAttempts: 'dontInvert'
                 });
+
+                if (code && code.data) {
+                    console.log('✅ QR найден:', code.data.substring(0, 50));
+                    
+                    // Останавливаем сканирование
+                    stopScan();
+
+                    // Показываем результат
+                    resultEl.textContent = '✅ QR найден: ' + code.data.substring(0, 100) + (code.data.length > 100 ? '...' : '');
+                    resultEl.classList.add('active');
+                    
+                    // Отправляем в бота
+                    sendToBot(code.data);
+                }
+            } catch (err) {
+                console.error('Scan error:', err);
             }
         }
 
-        // Запуск
-        startCamera();
+        // Отправка данных в бота
+        function sendToBot(qrData) {
+            if (!tg) {
+                statusEl.textContent = '❌ Ошибка: Telegram не инициализирован';
+                return;
+            }
+
+            try {
+                // Формируем данные для отправки
+                const payload = {
+                    type: 'qr_scanned',
+                    code: qrData,
+                    timestamp: Date.now()
+                };
+
+                // Преобразуем в JSON строку
+                const jsonStr = JSON.stringify(payload);
+                
+                console.log('📤 Отправка данных:', jsonStr);
+                statusEl.textContent = '📤 Отправка данных...';
+
+                // ВАЖНО: Отправляем данные через Telegram WebApp
+                tg.sendData(jsonStr);
+
+                // Обновляем статус
+                statusEl.textContent = '✅ QR-код отправлен!';
+                resultEl.textContent = '✅ Отправлено! Бот обрабатывает...';
+
+                // Показываем кнопку закрытия
+                tg.MainButton.setText('✅ Готово');
+                tg.MainButton.show();
+                tg.MainButton.onClick(() => {
+                    tg.close();
+                });
+
+            } catch (err) {
+                console.error('❌ Ошибка отправки:', err);
+                statusEl.textContent = '❌ Ошибка отправки: ' + err.message;
+                
+                // Альтернативный способ отправки
+                tryAlternativeSend(qrData);
+            }
+        }
+
+        // Альтернативный способ отправки (на случай ошибки)
+        function tryAlternativeSend(qrData) {
+            try {
+                // Пробуем отправить через WebApp напрямую
+                if (tg && tg.sendData) {
+                    const simpleData = JSON.stringify({ qr: qrData });
+                    tg.sendData(simpleData);
+                    console.log('📤 Альтернативная отправка:', simpleData);
+                    statusEl.textContent = '✅ Отправлено (альт.)';
+                }
+            } catch (e) {
+                console.error('❌ Альтернативная отправка тоже не удалась:', e);
+                statusEl.textContent = '❌ Не удалось отправить. Попробуйте еще раз.';
+            }
+        }
+
+        // Запускаем камеру при загрузке
+        initCamera();
+
+        // Очистка при закрытии
+        window.addEventListener('beforeunload', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            if (scanInterval) {
+                clearInterval(scanInterval);
+            }
+        });
+
+        // Добавляем обработчик для MainButton
+        if (tg) {
+            tg.onEvent('mainButtonClicked', function() {
+                tg.close();
+            });
+        }
     </script>
 </body>
 </html>
