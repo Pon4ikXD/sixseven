@@ -1,4 +1,56 @@
-// Telegram WebApp
+// ====================================
+// СОЗДАНИЕ ИНТЕРФЕЙСА ЧЕРЕЗ JS
+// ====================================
+function createApp() {
+    const app = document.createElement('div');
+    app.id = 'app';
+    app.innerHTML = `
+        <div class="header">
+            <span class="logo">📷 PulseQR</span>
+            <span class="badge" id="tgStatus">⚪ TG</span>
+        </div>
+
+        <div class="video-wrapper">
+            <video id="video" playsinline autoplay></video>
+            <div class="scan-overlay">
+                <div class="scan-frame">
+                    <div class="scan-line"></div>
+                    <div class="corner top-left"></div>
+                    <div class="corner top-right"></div>
+                    <div class="corner bottom-left"></div>
+                    <div class="corner bottom-right"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="buttons">
+            <button class="btn btn-primary" id="scanBtn">▶️ Сканировать</button>
+            <button class="btn btn-secondary" id="stopBtn" style="display: none;">⏹️ Стоп</button>
+        </div>
+
+        <div class="status-panel">
+            <div class="status-text" id="status">📱 Готов к работе</div>
+            <div id="result" class="result-box hidden"></div>
+        </div>
+
+        <div class="manual-panel">
+            <input type="text" class="manual-input" id="manualInput" placeholder="Вставьте QR‑код">
+            <button class="btn btn-secondary" id="manualSend">📤 Отправить</button>
+        </div>
+
+        <div class="debug-line" id="debug"></div>
+    `;
+    document.body.appendChild(app);
+}
+
+// ====================================
+// ЗАПУСК
+// ====================================
+createApp();
+
+// ====================================
+// TELEGRAM
+// ====================================
 let tg = null;
 try {
     if (window.Telegram?.WebApp) {
@@ -13,7 +65,9 @@ try {
     console.warn(e);
 }
 
-// Элементы
+// ====================================
+// ЭЛЕМЕНТЫ
+// ====================================
 const video = document.getElementById('video');
 const scanBtn = document.getElementById('scanBtn');
 const stopBtn = document.getElementById('stopBtn');
@@ -27,6 +81,9 @@ let stream = null;
 let scanning = false;
 let scanInterval = null;
 
+// ====================================
+// ФУНКЦИИ
+// ====================================
 function debugLog(msg) {
     console.log(msg);
     debugEl.innerText = msg;
@@ -45,9 +102,9 @@ function showResult(text, isError = false) {
         resultEl.style.borderColor = '#d44';
         resultEl.style.color = '#ffb3b3';
     } else {
-        resultEl.style.background = '#0f2a1a';
-        resultEl.style.borderColor = '#2e8b5e';
-        resultEl.style.color = '#b0ffd0';
+        resultEl.style.background = '#0e231a';
+        resultEl.style.borderColor = '#2a9eff';
+        resultEl.style.color = '#b3ffe0';
     }
     setTimeout(() => resultEl.classList.add('hidden'), 5000);
 }
@@ -129,7 +186,9 @@ manualSend.addEventListener('click', () => {
     manualInput.value = '';
 });
 
-// Старт
+scanBtn.addEventListener('click', startScan);
+stopBtn.addEventListener('click', stopScan);
+
 startCamera();
 
 window.addEventListener('beforeunload', () => {

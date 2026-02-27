@@ -5,60 +5,61 @@
 }
 
 body {
-    background: #000;
+    background: #0b0b0f;
     color: #fff;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 12px;
+    padding: 16px;
 }
 
-.app {
-    max-width: 480px;
+#app {
     width: 100%;
-    background: #0a0a0a;
-    border-radius: 32px;
-    padding: 20px 16px 24px;
+    max-width: 420px;
+    background: #101214;
+    border-radius: 36px;
+    padding: 24px 20px 32px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+    border: 1px solid #2a2a30;
 }
 
 .header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
     padding: 0 4px;
 }
 
-h1 {
+.logo {
     font-size: 1.6rem;
     font-weight: 700;
-    background: linear-gradient(145deg, #40a7e3, #8a6df0);
+    background: linear-gradient(145deg, #4ab7ff, #9d7aff);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
 .badge {
-    background: #1e1e1e;
+    background: #1c1c22;
     padding: 6px 14px;
-    border-radius: 30px;
-    font-size: 0.8rem;
+    border-radius: 40px;
+    font-size: 0.85rem;
     font-weight: 500;
-    border: 1px solid #2e2e2e;
+    border: 1px solid #33333d;
 }
 
-.video-container {
+.video-wrapper {
     position: relative;
     width: 100%;
-    aspect-ratio: 3/4;
-    background: #0f0f0f;
-    border-radius: 28px;
+    aspect-ratio: 1/1;
+    background: #07080a;
+    border-radius: 32px;
     overflow: hidden;
-    margin-bottom: 20px;
-    border: 1px solid #2a2a2a;
-    box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+    margin-bottom: 24px;
+    border: 2px solid #25252b;
+    box-shadow: inset 0 0 20px #000000;
 }
 
 #video {
@@ -80,12 +81,11 @@ h1 {
 }
 
 .scan-frame {
-    width: 280px;
-    height: 280px;
-    border: 3px solid rgba(64, 167, 227, 0.8);
+    width: 260px;
+    height: 260px;
+    border: 3px solid rgba(74, 183, 255, 0.9);
     border-radius: 40px;
-    background: transparent;
-    box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.7);
+    box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.75);
     position: relative;
 }
 
@@ -95,9 +95,9 @@ h1 {
     left: 10%;
     width: 80%;
     height: 4px;
-    background: #40a7e3;
+    background: #4ab7ff;
     border-radius: 4px;
-    box-shadow: 0 0 20px #40a7e3, 0 0 8px #ffffff;
+    box-shadow: 0 0 20px #4ab7ff, 0 0 8px #fff;
     animation: scanMove 2s ease-in-out infinite;
 }
 
@@ -109,9 +109,9 @@ h1 {
 
 .corner {
     position: absolute;
-    width: 32px;
-    height: 32px;
-    border: 5px solid #40a7e3;
+    width: 30px;
+    height: 30px;
+    border: 5px solid #4ab7ff;
 }
 
 .top-left {
@@ -146,46 +146,7 @@ h1 {
     border-bottom-right-radius: 40px;
 }
 
-.corner {
-    position: absolute;
-    width: 28px;
-    height: 28px;
-    border: 4px solid #40a7e3;
-}
-
-.top-left {
-    top: -2px;
-    left: -2px;
-    border-right: none;
-    border-bottom: none;
-    border-top-left-radius: 28px;
-}
-
-.top-right {
-    top: -2px;
-    right: -2px;
-    border-left: none;
-    border-bottom: none;
-    border-top-right-radius: 28px;
-}
-
-.bottom-left {
-    bottom: -2px;
-    left: -2px;
-    border-right: none;
-    border-top: none;
-    border-bottom-left-radius: 28px;
-}
-
-.bottom-right {
-    bottom: -2px;
-    right: -2px;
-    border-left: none;
-    border-top: none;
-    border-bottom-right-radius: 28px;
-}
-
-.controls {
+.buttons {
     display: flex;
     gap: 12px;
     margin-bottom: 20px;
@@ -195,84 +156,95 @@ h1 {
     flex: 1;
     padding: 16px 0;
     border: none;
-    border-radius: 40px;
+    border-radius: 60px;
     font-weight: 600;
     font-size: 1.1rem;
     cursor: pointer;
     transition: 0.2s;
-    background: #2a2a2a;
+    background: #1e1e26;
     color: white;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.6);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.6);
 }
 
-.btn.primary {
-    background: #40a7e3;
+.btn-primary {
+    background: #4ab7ff;
     color: #000;
-    font-weight: 700;
 }
 
-.btn.secondary {
-    background: #2a2a2a;
-    border: 1px solid #3a3a3a;
+.btn-primary:active {
+    transform: scale(0.96);
+    background: #2a9eff;
 }
 
-.btn:active {
-    transform: scale(0.97);
+.btn-secondary {
+    background: #2a2a33;
+    border: 1px solid #3d3d4a;
 }
 
-.status-card, .manual-card {
-    background: #141414;
-    border-radius: 20px;
+.btn-secondary:active {
+    transform: scale(0.96);
+}
+
+.status-panel {
+    background: #17171d;
+    border-radius: 28px;
     padding: 18px;
     margin-bottom: 16px;
-    border: 1px solid #2a2a2a;
+    border: 1px solid #2f2f38;
 }
 
-#status {
+.status-text {
     color: #aaa;
     font-size: 1rem;
-    font-weight: 400;
 }
 
-.result {
+.result-box {
     margin-top: 14px;
     padding: 16px;
-    background: #0f2a1a;
-    border: 1px solid #2e8b5e;
-    border-radius: 18px;
-    color: #b0ffd0;
+    background: #0e231a;
+    border: 1px solid #2a9eff;
+    border-radius: 24px;
+    color: #b3ffe0;
     word-break: break-word;
     font-size: 0.95rem;
 }
 
-.result.hidden {
+.hidden {
     display: none;
 }
 
-input {
+.manual-panel {
+    background: #17171d;
+    border-radius: 28px;
+    padding: 18px;
+    border: 1px solid #2f2f38;
+}
+
+.manual-input {
     width: 100%;
     padding: 16px;
-    border-radius: 40px;
-    border: 1px solid #3a3a3a;
-    background: #0f0f0f;
+    border-radius: 60px;
+    border: 1px solid #3a3a45;
+    background: #0f0f14;
     color: white;
     font-size: 1rem;
     margin-bottom: 14px;
     outline: none;
 }
 
-input:focus {
-    border-color: #40a7e3;
+.manual-input:focus {
+    border-color: #4ab7ff;
 }
 
-.debug {
+.debug-line {
     font-family: monospace;
     font-size: 0.7rem;
     color: #555;
-    margin-top: 12px;
-    padding: 8px;
-    background: #0c0c0c;
-    border-radius: 10px;
+    margin-top: 16px;
+    padding: 10px;
+    background: #0c0c12;
+    border-radius: 16px;
     max-height: 70px;
     overflow-y: auto;
+    border: 1px solid #25252b;
 }
