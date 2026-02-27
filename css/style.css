@@ -7,57 +7,58 @@
 body {
     background: #000;
     color: #fff;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 16px;
+    padding: 12px;
 }
 
-.container {
+.app {
     max-width: 480px;
     width: 100%;
-    background: #111;
+    background: #0a0a0a;
     border-radius: 32px;
-    padding: 24px 20px 32px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    padding: 20px 16px 24px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
 }
 
 .header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
+    padding: 0 4px;
 }
 
 h1 {
-    font-size: 1.5rem;
-    font-weight: 600;
-    background: linear-gradient(135deg, #40a7e3, #7f5af0);
+    font-size: 1.6rem;
+    font-weight: 700;
+    background: linear-gradient(145deg, #40a7e3, #8a6df0);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    background-clip: text;
 }
 
 .badge {
     background: #1e1e1e;
     padding: 6px 14px;
-    border-radius: 40px;
-    font-size: 0.75rem;
+    border-radius: 30px;
+    font-size: 0.8rem;
     font-weight: 500;
     border: 1px solid #2e2e2e;
 }
 
-.video-wrapper {
+.video-container {
     position: relative;
     width: 100%;
-    aspect-ratio: 4/3;
-    background: #0a0a0a;
-    border-radius: 24px;
+    aspect-ratio: 3/4;
+    background: #0f0f0f;
+    border-radius: 28px;
     overflow: hidden;
     margin-bottom: 20px;
     border: 1px solid #2a2a2a;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
 }
 
 #video {
@@ -79,29 +80,70 @@ h1 {
 }
 
 .scan-frame {
-    width: 70%;
-    height: 50%;
-    border: 2px solid #40a7e3;
-    border-radius: 24px;
-    box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.5);
+    width: 85%;
+    height: 55%;
+    border: 2px solid rgba(64, 167, 227, 0.7);
+    border-radius: 40px;
+    background: transparent;
+    box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.7);
     position: relative;
 }
 
 .scan-line {
     position: absolute;
-    top: 0;
-    left: 10%;
-    width: 80%;
-    height: 2px;
+    top: 8%;
+    left: 8%;
+    width: 84%;
+    height: 3px;
     background: #40a7e3;
-    box-shadow: 0 0 10px #40a7e3;
-    animation: scan 2s ease-in-out infinite;
+    border-radius: 2px;
+    box-shadow: 0 0 18px #40a7e3, 0 0 8px #fff;
+    animation: scanMove 2.2s ease-in-out infinite;
 }
 
-@keyframes scan {
-    0% { top: 5%; }
-    50% { top: 90%; }
-    100% { top: 5%; }
+@keyframes scanMove {
+    0% { top: 8%; }
+    50% { top: 86%; }
+    100% { top: 8%; }
+}
+
+.corner {
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    border: 4px solid #40a7e3;
+}
+
+.top-left {
+    top: -2px;
+    left: -2px;
+    border-right: none;
+    border-bottom: none;
+    border-top-left-radius: 28px;
+}
+
+.top-right {
+    top: -2px;
+    right: -2px;
+    border-left: none;
+    border-bottom: none;
+    border-top-right-radius: 28px;
+}
+
+.bottom-left {
+    bottom: -2px;
+    left: -2px;
+    border-right: none;
+    border-top: none;
+    border-bottom-left-radius: 28px;
+}
+
+.bottom-right {
+    bottom: -2px;
+    right: -2px;
+    border-left: none;
+    border-top: none;
+    border-bottom-right-radius: 28px;
 }
 
 .controls {
@@ -112,20 +154,22 @@ h1 {
 
 .btn {
     flex: 1;
-    padding: 14px;
+    padding: 16px 0;
     border: none;
     border-radius: 40px;
     font-weight: 600;
-    font-size: 1rem;
+    font-size: 1.1rem;
     cursor: pointer;
     transition: 0.2s;
     background: #2a2a2a;
     color: white;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.6);
 }
 
 .btn.primary {
     background: #40a7e3;
-    color: black;
+    color: #000;
+    font-weight: 700;
 }
 
 .btn.secondary {
@@ -133,32 +177,33 @@ h1 {
     border: 1px solid #3a3a3a;
 }
 
-.btn:hover {
-    opacity: 0.9;
+.btn:active {
+    transform: scale(0.97);
 }
 
-.card {
-    background: #1a1a1a;
+.status-card, .manual-card {
+    background: #141414;
     border-radius: 20px;
-    padding: 20px;
-    margin-bottom: 20px;
+    padding: 18px;
+    margin-bottom: 16px;
     border: 1px solid #2a2a2a;
 }
 
-.status {
+#status {
     color: #aaa;
-    font-size: 0.95rem;
+    font-size: 1rem;
+    font-weight: 400;
 }
 
 .result {
-    margin-top: 12px;
-    padding: 14px;
-    background: #0e2a1a;
-    border: 1px solid #2e7d5e;
-    border-radius: 16px;
-    color: #b5ffd0;
+    margin-top: 14px;
+    padding: 16px;
+    background: #0f2a1a;
+    border: 1px solid #2e8b5e;
+    border-radius: 18px;
+    color: #b0ffd0;
     word-break: break-word;
-    font-size: 0.85rem;
+    font-size: 0.95rem;
 }
 
 .result.hidden {
@@ -167,13 +212,13 @@ h1 {
 
 input {
     width: 100%;
-    padding: 14px;
+    padding: 16px;
     border-radius: 40px;
     border: 1px solid #3a3a3a;
     background: #0f0f0f;
     color: white;
     font-size: 1rem;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
     outline: none;
 }
 
@@ -181,9 +226,14 @@ input:focus {
     border-color: #40a7e3;
 }
 
-footer {
-    text-align: center;
-    color: #666;
-    font-size: 0.75rem;
+.debug {
+    font-family: monospace;
+    font-size: 0.7rem;
+    color: #555;
     margin-top: 12px;
+    padding: 8px;
+    background: #0c0c0c;
+    border-radius: 10px;
+    max-height: 70px;
+    overflow-y: auto;
 }

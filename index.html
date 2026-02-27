@@ -9,44 +9,42 @@
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </head>
 <body>
-    <div class="container">
+    <div class="app">
         <header class="header">
-            <h1>📷 Pulse QR Scanner</h1>
-            <div class="badge" id="tgStatus">⚪ Telegram</div>
+            <h1>📷 Pulse QR</h1>
+            <div class="badge" id="tgStatus">⚪ TG</div>
         </header>
 
-        <main>
-            <div class="video-wrapper">
-                <video id="video" playsinline autoplay></video>
-                <div class="scan-overlay">
-                    <div class="scan-frame">
-                        <div class="scan-line"></div>
-                    </div>
+        <div class="video-container">
+            <video id="video" playsinline autoplay></video>
+            <div class="scan-overlay">
+                <div class="scan-frame">
+                    <div class="scan-line"></div>
+                    <div class="corner top-left"></div>
+                    <div class="corner top-right"></div>
+                    <div class="corner bottom-left"></div>
+                    <div class="corner bottom-right"></div>
                 </div>
             </div>
+        </div>
 
-            <div class="controls">
-                <button class="btn primary" id="scanBtn">▶️ Начать сканирование</button>
-                <button class="btn secondary" id="stopBtn" style="display: none;">⏹️ Остановить</button>
-            </div>
+        <div class="controls">
+            <button class="btn primary" id="scanBtn">▶️ Начать сканирование</button>
+            <button class="btn secondary" id="stopBtn" style="display: none;">⏹️ Остановить</button>
+        </div>
 
-            <div class="card">
-                <div class="status" id="status">⏳ Загрузка камеры...</div>
-                <div id="result" class="result hidden"></div>
-            </div>
+        <div class="status-card">
+            <div id="status">📱 Нажми "Начать сканирование"</div>
+            <div id="result" class="result hidden"></div>
+        </div>
 
-            <div class="card">
-                <h3>📎 Ручной ввод</h3>
-                <input type="text" id="manualInput" placeholder="Вставьте QR-код или токен" />
-                <button class="btn secondary" id="manualSend">📤 Отправить</button>
-            </div>
-        </main>
+        <div class="manual-card">
+            <input type="text" id="manualInput" placeholder="Вставьте QR‑код или токен">
+            <button class="btn secondary" id="manualSend">📤 Отправить</button>
+        </div>
 
-        <footer>
-            <p>Наведи камеру на QR-код пары</p>
-        </footer>
+        <div class="debug" id="debug"></div>
     </div>
-
     <script src="js/scanner.js"></script>
 </body>
 </html>

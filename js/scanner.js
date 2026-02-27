@@ -5,12 +5,12 @@ try {
         tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
-        document.getElementById('tgStatus').innerText = '✅ Telegram';
+        document.getElementById('tgStatus').innerText = '✅ TG';
     } else {
-        document.getElementById('tgStatus').innerText = '❌ Telegram';
+        document.getElementById('tgStatus').innerText = '❌ TG';
     }
 } catch (e) {
-    console.warn('Telegram init error', e);
+    console.warn(e);
 }
 
 // Элементы
@@ -21,34 +21,37 @@ const statusEl = document.getElementById('status');
 const resultEl = document.getElementById('result');
 const manualInput = document.getElementById('manualInput');
 const manualSend = document.getElementById('manualSend');
+const debugEl = document.getElementById('debug');
 
 let stream = null;
 let scanning = false;
 let scanInterval = null;
 
-// Логирование статуса
-function setStatus(text, isError = false) {
-    statusEl.innerText = text;
-    statusEl.style.color = isError ? '#ff6b6b' : '#aaa';
+function debugLog(msg) {
+    console.log(msg);
+    debugEl.innerText = msg;
 }
 
-// Показать результат
+function setStatus(text, isError = false) {
+    statusEl.innerText = text;
+    statusEl.style.color = isError ? '#ff8888' : '#aaa';
+}
+
 function showResult(text, isError = false) {
     resultEl.innerText = text;
     resultEl.classList.remove('hidden');
     if (isError) {
         resultEl.style.background = '#2a1a1a';
-        resultEl.style.borderColor = '#d32f2f';
+        resultEl.style.borderColor = '#d44';
         resultEl.style.color = '#ffb3b3';
     } else {
-        resultEl.style.background = '#0e2a1a';
-        resultEl.style.borderColor = '#2e7d5e';
-        resultEl.style.color = '#b5ffd0';
+        resultEl.style.background = '#0f2a1a';
+        resultEl.style.borderColor = '#2e8b5e';
+        resultEl.style.color = '#b0ffd0';
     }
     setTimeout(() => resultEl.classList.add('hidden'), 5000);
 }
 
-// Отправка данных в бота
 function sendToBot(data) {
     if (!tg) {
         setStatus('❌ Telegram не подключён', true);
@@ -56,7 +59,7 @@ function sendToBot(data) {
     }
     try {
         tg.sendData(JSON.stringify(data));
-        setStatus('✅ Данные отправлены');
+        setStatus('✅ Отправлено');
         showResult('✅ QR отправлен в бота');
     } catch (e) {
         setStatus('❌ Ошибка отправки', true);
@@ -64,10 +67,9 @@ function sendToBot(data) {
     }
 }
 
-// Камера
 async function startCamera() {
     try {
-        setStatus('⏳ Запрос камеры...');
+        setStatus('📷 Запрос камеры...');
         stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: 'environment', width: 1280, height: 720 }
         });
@@ -75,15 +77,19 @@ async function startCamera() {
         await video.play();
         setStatus('✅ Камера готова');
         scanBtn.disabled = false;
+        debugLog('✅ Камера запущена');
     } catch (err) {
         setStatus('❌ Камера недоступна', true);
         showResult('❌ ' + err.message, true);
+        debugLog('❌ Ошибка камеры: ' + err.message);
     }
 }
 
-// Сканирование
 function startScan() {
-    if (!stream) return startCamera().then(startScan);
+    if (!stream) {
+        startCamera().then(() => startScan());
+        return;
+    }
     scanning = true;
     scanBtn.style.display = 'none';
     stopBtn.style.display = 'block';
@@ -91,29 +97,31 @@ function startScan() {
 
     scanInterval = setInterval(() => {
         if (!scanning || !video.videoWidth) return;
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, canvas.width, canvas.height);
-        if (code?.data?.length > 10) {
-            stopScan();
-            sendToBot({ type: 'qr_scanned', code: code.data, timestamp: Date.now() });
-        }
-    }, 300);
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, canvas.width, canvas.height);
+            if (code?.data?.length > 10) {
+                debugLog('✅ QR найден');
+                stopScan();
+                sendToBot({ type: 'qr_scanned', code: code.data, timestamp: Date.now() });
+            }
+        } catch (e) {}
+    }, 250);
 }
 
 function stopScan() {
     scanning = false;
     scanBtn.style.display = 'block';
     stopBtn.style.display = 'none';
-    setStatus('⏹️ Сканирование остановлено');
+    setStatus('⏹️ Остановлено');
     clearInterval(scanInterval);
 }
 
-// Ручной ввод
 manualSend.addEventListener('click', () => {
     const text = manualInput.value.trim();
     if (!text) return showResult('❌ Введите данные', true);
@@ -121,10 +129,9 @@ manualSend.addEventListener('click', () => {
     manualInput.value = '';
 });
 
-// Инициализация
+// Старт
 startCamera();
 
-// Очистка
 window.addEventListener('beforeunload', () => {
     stream?.getTracks().forEach(t => t.stop());
     clearInterval(scanInterval);
