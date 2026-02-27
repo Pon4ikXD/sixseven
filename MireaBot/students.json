@@ -1,0 +1,37 @@
+{
+  "students": [
+    {
+      "id": 1,
+      "name": "Максат",
+      "pulse_login": "migal.m.a@edu.mirea.ru",
+      "pulse_password": "M@xim2005",
+      "yandex_email": "mig4l.m@yandex.ru",
+      "yandex_app_password": "zuskazsuojzodurq"
+    },
+    {
+      "id": 2,
+      "name": "Никитуз",
+      "pulse_login": "karasev.n.i@edu.mirea.ru",
+      "pulse_password": "Srak1234!!",
+      "yandex_email": "carasev.nickita2017@yandex.ru",
+      "yandex_app_password": "ohdoiasmjmgbqygg"
+    },
+    {
+      "id": 3,
+      "name": "Берилл",
+      "pulse_login": "popenkov.k.a@edu.mirea.ru",
+      "pulse_password": "@Kirego1807!",
+      "yandex_email": "popenkov.k.a@yandex.ru",
+      "yandex_app_password": "tzhkiehkxpmbamqm"
+    },
+    {
+      "id": 4,
+      "name": "Бздима",
+      "pulse_login": "chernigovtsev.d.s@edu.mirea.ru",
+      "pulse_password": "nafnafberdnaF49_",
+      "yandex_email": "loreover@yandex.ru",
+      "yandex_app_password": "bpiifvdhpviocodh"
+    }
+  ]
+}
+
