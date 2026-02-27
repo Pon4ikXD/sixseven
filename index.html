@@ -6,66 +6,45 @@
     <title>QR Scanner</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
-<body style="font-family: sans-serif; text-align: center; padding: 20px; background: #f0f0f0;">
+<body style="font-family: sans-serif; text-align: center; padding: 20px;">
     <h1>📷 QR Scanner</h1>
     
-    <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-        <h3>⚠️ Важно!</h3>
-        <p id="warning" style="color: red; font-weight: bold;">Проверка...</p>
+    <div style="background: #ffd700; padding: 20px; border-radius: 10px; margin: 20px 0;">
+        <h3>⚠️ Проблема с WebSocket</h3>
+        <p>Используем альтернативный метод отправки</p>
     </div>
     
-    <button onclick="sendTest()" style="padding: 20px; font-size: 20px; background: #40a7e3; color: white; border: none; border-radius: 10px; width: 100%; margin-bottom: 10px;">
-        📤 Отправить тест
+    <button onclick="sendData()" style="padding: 20px; font-size: 20px; background: #40a7e3; color: white; border: none; border-radius: 10px; width: 100%; margin-bottom: 10px;">
+        📤 Отправить данные
     </button>
-    
-    <div id="debug" style="background: #000; color: #0f0; padding: 10px; border-radius: 5px; font-size: 12px; text-align: left; height: 200px; overflow: auto;"></div>
 
     <script>
-        const debug = document.getElementById('debug');
-        const warning = document.getElementById('warning');
+        let tg = null;
         
-        function addDebug(text) {
-            debug.innerHTML += `[${new Date().toLocaleTimeString()}] ${text}<br>`;
-            console.log(text);
-        }
-
-        // Проверяем, открыто ли в Telegram
-        if (window.Telegram && window.Telegram.WebApp) {
-            const tg = window.Telegram.WebApp;
-            
-            if (tg.initData) {
-                warning.innerHTML = '✅ Открыто в Telegram';
-                warning.style.color = 'green';
-                addDebug('✅ Есть initData - можно отправлять');
-                
+        try {
+            if (window.Telegram && window.Telegram.WebApp) {
+                tg = window.Telegram.WebApp;
                 tg.ready();
                 tg.expand();
                 
-                function sendTest() {
-                    try {
-                        addDebug('📤 Отправка теста...');
-                        tg.sendData('test_message_123');
-                        addDebug('✅ Отправлено!');
-                    } catch (e) {
-                        addDebug('❌ Ошибка: ' + e.message);
-                    }
-                }
-            } else {
-                warning.innerHTML = '❌ Открыто НЕ в Telegram (нет initData)';
-                warning.style.color = 'red';
-                addDebug('❌ Нет initData - это браузер, а не Telegram');
-                
-                function sendTest() {
-                    alert('Это тест в браузере. Откройте через Telegram бота!');
-                }
+                // Игнорируем ошибки WebSocket
+                console.log('Telegram WebApp инициализирован');
             }
-        } else {
-            warning.innerHTML = '❌ Telegram WebApp не найден';
-            warning.style.color = 'red';
-            addDebug('❌ Telegram WebApp не найден');
-            
-            function sendTest() {
-                alert('Telegram WebApp не найден!');
+        } catch (e) {
+            console.error('Ошибка:', e);
+        }
+        
+        function sendData() {
+            try {
+                // Простой текст
+                if (tg) {
+                    tg.sendData('qr_code_detected');
+                    alert('Данные отправлены!');
+                } else {
+                    alert('Telegram не инициализирован');
+                }
+            } catch (e) {
+                alert('Ошибка: ' + e.message);
             }
         }
     </script>
