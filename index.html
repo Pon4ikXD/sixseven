@@ -1,36 +1,329 @@
-@dp.message(F.web_app_data)
-async def handle_web_app_data(message: Message):
-    """Обработка данных из WebApp"""
-    user_id = message.from_user.id
-    web_app_data = message.web_app_data
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Scanner</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    # Подробное логирование
-    logger.info("=" * 50)
-    logger.info(f"📱 WebApp data received from user {user_id}")
-    logger.info(f"Button text: {web_app_data.button_text}")
-    logger.info(f"Data: {web_app_data.data}")
-    logger.info(f"Raw data type: {type(web_app_data.data)}")
-    logger.info("=" * 50)
+        body {
+            background: #000;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
 
-    # Отправляем подтверждение получения
-    await message.answer(
-        f"✅ **Данные получены!**\n\n"
-        f"`{web_app_data.data}`",
-        parse_mode="Markdown"
-    )
+        .video-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: #1a1a1a;
+        }
 
-    try:
-        # Парсим данные
-        data = json.loads(web_app_data.data)
-        logger.info(f"Parsed JSON: {data}")
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
 
-        if data.get("type") == "qr_scanned":
-            qr_code = data.get("code")
-            await message.answer(f"✅ QR код: `{qr_code}`")
+        .scan-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
 
-    except json.JSONDecodeError as e:
-        logger.error(f"JSON decode error: {e}")
-        await message.answer(f"❌ Не JSON: `{web_app_data.data}`")
-    except Exception as e:
-        logger.error(f"Error: {e}")
-        await message.answer(f"❌ Ошибка: {e}")
+        .scan-frame {
+            width: 250px;
+            height: 250px;
+            border: 2px solid #40a7e3;
+            border-radius: 20px;
+            box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.5);
+        }
+
+        .controls {
+            background: #1a1a1a;
+            padding: 16px;
+            border-top: 1px solid #333;
+        }
+
+        .status {
+            text-align: center;
+            margin-bottom: 12px;
+            color: #888;
+            font-size: 14px;
+        }
+
+        .button {
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            background: #40a7e3;
+            color: white;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            margin-bottom: 8px;
+        }
+
+        .button:active {
+            opacity: 0.8;
+        }
+
+        .button.stop {
+            background: #ff3b30;
+        }
+
+        .button.test {
+            background: #34c759;
+        }
+
+        .result {
+            background: #1a4d1a;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+            font-size: 12px;
+            word-break: break-all;
+            display: none;
+        }
+
+        .result.active {
+            display: block;
+        }
+
+        .debug {
+            background: #333;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            color: #0f0;
+            margin-top: 8px;
+            max-height: 100px;
+            overflow: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="video-container">
+        <video id="video" playsinline></video>
+        <div class="scan-overlay">
+            <div class="scan-frame"></div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="status" id="status">⏳ Запуск камеры...</div>
+
+        <button class="button" id="scanBtn" onclick="startScan()">▶️ Начать сканирование</button>
+        <button class="button stop" id="stopBtn" onclick="stopScan()" style="display: none;">⏹️ Остановить</button>
+        <button class="button test" onclick="sendTestData()">📤 Отправить тест</button>
+
+        <div class="result" id="result"></div>
+        <div class="debug" id="debug"></div>
+    </div>
+
+    <script>
+        // Инициализация Telegram
+        let tg = null;
+        try {
+            if (window.Telegram && window.Telegram.WebApp) {
+                tg = window.Telegram.WebApp;
+                tg.ready();
+                tg.expand();
+                addDebug('✅ Telegram инициализирован');
+            } else {
+                addDebug('❌ Telegram WebApp не найден');
+            }
+        } catch (e) {
+            addDebug('❌ Ошибка Telegram: ' + e.message);
+        }
+
+        const video = document.getElementById('video');
+        const statusEl = document.getElementById('status');
+        const scanBtn = document.getElementById('scanBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const resultEl = document.getElementById('result');
+        const debugEl = document.getElementById('debug');
+
+        let stream = null;
+        let scanning = false;
+        let scanInterval = null;
+
+        function addDebug(text) {
+            debugEl.innerHTML += text + '<br>';
+            console.log(text);
+        }
+
+        // Запуск камеры
+        async function initCamera() {
+            try {
+                statusEl.textContent = '⏳ Запрос доступа к камере...';
+                addDebug('📷 Запрос камеры...');
+
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+
+                video.srcObject = stream;
+                await video.play();
+
+                statusEl.textContent = '✅ Камера готова';
+                scanBtn.disabled = false;
+                addDebug('✅ Камера запущена');
+
+            } catch (err) {
+                statusEl.textContent = '❌ Ошибка: ' + err.message;
+                addDebug('❌ Ошибка камеры: ' + err.message);
+            }
+        }
+
+        // Начать сканирование
+        function startScan() {
+            if (!stream) return;
+
+            scanning = true;
+            scanBtn.style.display = 'none';
+            stopBtn.style.display = 'block';
+            statusEl.textContent = '🔍 Сканирование...';
+            addDebug('🔍 Сканирование запущено');
+
+            scanInterval = setInterval(scanQR, 500);
+        }
+
+        // Остановить сканирование
+        function stopScan() {
+            scanning = false;
+            scanBtn.style.display = 'block';
+            stopBtn.style.display = 'none';
+            statusEl.textContent = '⏹️ Сканирование остановлено';
+
+            if (scanInterval) {
+                clearInterval(scanInterval);
+            }
+            addDebug('⏹️ Сканирование остановлено');
+        }
+
+        // Сканирование QR
+        function scanQR() {
+            if (!scanning || !video.videoWidth) return;
+
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, canvas.width, canvas.height, {
+                    inversionAttempts: 'dontInvert'
+                });
+
+                if (code) {
+                    addDebug('✅ QR найден: ' + code.data.substring(0, 30) + '...');
+                    stopScan();
+
+                    resultEl.textContent = '✅ QR найден: ' + code.data;
+                    resultEl.classList.add('active');
+                    statusEl.textContent = '✅ Отправка...';
+
+                    sendToBot(code.data);
+                }
+            } catch (err) {
+                addDebug('❌ Ошибка сканирования: ' + err.message);
+            }
+        }
+
+        // Отправка данных в бота
+        function sendToBot(qrData) {
+            if (!tg) {
+                statusEl.textContent = '❌ Telegram не инициализирован';
+                addDebug('❌ Telegram не инициализирован');
+                return;
+            }
+
+            try {
+                const payload = {
+                    type: 'qr_scanned',
+                    code: qrData,
+                    timestamp: Date.now()
+                };
+
+                const jsonStr = JSON.stringify(payload);
+                addDebug('📤 Отправка: ' + jsonStr);
+
+                tg.sendData(jsonStr);
+
+                statusEl.textContent = '✅ QR отправлен!';
+                addDebug('✅ Данные отправлены');
+
+                tg.MainButton.setText('Закрыть');
+                tg.MainButton.show();
+                tg.MainButton.onClick(() => tg.close());
+
+            } catch (err) {
+                statusEl.textContent = '❌ Ошибка отправки';
+                addDebug('❌ Ошибка отправки: ' + err.message);
+            }
+        }
+
+        // Отправка тестовых данных
+        function sendTestData() {
+            if (!tg) {
+                statusEl.textContent = '❌ Telegram не инициализирован';
+                return;
+            }
+
+            try {
+                const testData = {
+                    type: 'test',
+                    message: 'Test from camera',
+                    timestamp: Date.now()
+                };
+
+                const jsonStr = JSON.stringify(testData);
+                addDebug('📤 Тест: ' + jsonStr);
+
+                tg.sendData(jsonStr);
+                statusEl.textContent = '✅ Тест отправлен!';
+
+            } catch (err) {
+                statusEl.textContent = '❌ Ошибка: ' + err.message;
+            }
+        }
+
+        // Запускаем камеру при загрузке
+        initCamera();
+
+        // Очистка при закрытии
+        window.addEventListener('beforeunload', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>
