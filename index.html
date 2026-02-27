@@ -11,7 +11,6 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
         }
 
         body {
@@ -22,8 +21,6 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            position: fixed;
-            width: 100%;
         }
 
         .video-container {
@@ -81,7 +78,8 @@
             background: #1a1a1a;
             padding: 16px;
             border-top: 1px solid #333;
-            padding-bottom: calc(16px + env(safe-area-inset-bottom));
+            max-height: 40%;
+            overflow-y: auto;
         }
 
         .status {
@@ -91,6 +89,10 @@
             font-size: 14px;
             font-weight: 500;
         }
+
+        .status.success { color: #4caf50; }
+        .status.error { color: #ff5252; }
+        .status.info { color: #40a7e3; }
 
         .button {
             width: 100%;
@@ -105,8 +107,6 @@
             transition: opacity 0.2s;
             margin-bottom: 8px;
             -webkit-appearance: none;
-            appearance: none;
-            touch-action: manipulation;
         }
 
         .button:active {
@@ -115,6 +115,12 @@
 
         .button.stop {
             background: #ff3b30;
+        }
+
+        .button.small {
+            background: #333;
+            padding: 12px;
+            font-size: 14px;
         }
 
         .result {
@@ -155,18 +161,15 @@
             font-size: 16px;
         }
 
-        .test-buttons {
+        .button-row {
             display: flex;
             gap: 8px;
-            margin-top: 8px;
+            margin: 8px 0;
         }
 
-        .test-buttons .button {
+        .button-row .button {
             flex: 1;
-            background: #333;
             margin-bottom: 0;
-            font-size: 14px;
-            padding: 12px;
         }
 
         .debug-log {
@@ -177,8 +180,17 @@
             padding: 8px;
             background: #0a0a0a;
             border-radius: 6px;
-            max-height: 60px;
+            max-height: 80px;
             overflow-y: auto;
+        }
+
+        .telegram-info {
+            background: #1a2a3a;
+            border-radius: 8px;
+            padding: 8px;
+            margin: 8px 0;
+            font-size: 11px;
+            border: 1px solid #40a7e3;
         }
     </style>
 </head>
@@ -195,21 +207,26 @@
     <div class="controls">
         <div class="status" id="status">⏳ Загрузка...</div>
 
-        <div class="test-buttons">
+        <div class="telegram-info" id="telegramInfo">
+            📱 Telegram: проверка...
+        </div>
+
+        <div class="button-row">
             <button class="button" onclick="startScan()" id="scanBtn">▶️ Сканировать</button>
             <button class="button stop" onclick="stopScan()" id="stopBtn" style="display: none;">⏹️ Стоп</button>
         </div>
 
-        <div class="test-buttons">
-            <button class="button" onclick="testTelegram()">📱 Тест TG</button>
-            <button class="button" onclick="sendTestData()">🧪 Тест отправки</button>
+        <div class="button-row">
+            <button class="button small" onclick="testTelegram()">📱 Тест TG</button>
+            <button class="button small" onclick="sendTestData()">🧪 Тест отправки</button>
+            <button class="button small" onclick="sendDebugInfo()">🔍 Debug</button>
         </div>
 
         <div id="messageArea"></div>
 
         <div class="manual-section">
-            <input type="text" class="manual-input" id="manualInput" placeholder="Вставьте QR-код">
-            <button class="button" onclick="sendManual()">📤 Отправить</button>
+            <input type="text" class="manual-input" id="manualInput" placeholder="Вставьте QR-код или токен">
+            <button class="button small" onclick="sendManual()">📤 Отправить вручную</button>
         </div>
 
         <div class="debug-log" id="debugLog">✓ Система готова</div>
@@ -223,10 +240,12 @@
         let scanning = false;
         let scanInterval = null;
         let debugMessages = [];
+        let sendAttempts = 0;
 
         // DOM элементы
         const video = document.getElementById('video');
         const statusEl = document.getElementById('status');
+        const telegramInfo = document.getElementById('telegramInfo');
         const scanBtn = document.getElementById('scanBtn');
         const stopBtn = document.getElementById('stopBtn');
         const messageArea = document.getElementById('messageArea');
@@ -234,22 +253,26 @@
         const debugLog = document.getElementById('debugLog');
 
         // Логирование
-        function addDebug(message) {
+        function addDebug(message, type = 'info') {
             const timestamp = new Date().toLocaleTimeString();
-            debugMessages.unshift(`[${timestamp}] ${message}`);
-            if (debugMessages.length > 5) debugMessages.pop();
+            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '📌';
+            const line = `${icon} [${timestamp}] ${message}`;
+
+            debugMessages.unshift(line);
+            if (debugMessages.length > 8) debugMessages.pop();
+
             debugLog.innerHTML = debugMessages.join('<br>');
             console.log(message);
         }
 
         // Обновление статуса
-        function setStatus(text, isError = false) {
+        function setStatus(text, type = 'info') {
             statusEl.textContent = text;
-            statusEl.style.color = isError ? '#ff5252' : '#888';
-            addDebug(text);
+            statusEl.className = 'status ' + type;
+            addDebug(text, type);
         }
 
-        // Показать сообщение
+        // Показать сообщение пользователю
         function showMessage(text, isError = false) {
             const div = document.createElement('div');
             div.className = isError ? 'error' : 'result';
@@ -261,10 +284,10 @@
                 if (messageArea.firstChild === div) {
                     messageArea.innerHTML = '';
                 }
-            }, 3000);
+            }, 4000);
         }
 
-        // Тест Telegram
+        // Тест Telegram подключения
         function testTelegram() {
             addDebug('🔍 Проверка Telegram...');
 
@@ -277,94 +300,161 @@
 
                     const platform = tg.platform || 'unknown';
                     const version = tg.version || 'unknown';
+                    const theme = tg.colorScheme || 'unknown';
 
-                    setStatus(`✅ TG: ${platform}`);
-                    addDebug(`✅ Версия: ${version}, Платформа: ${platform}`);
+                    // Показываем информацию
+                    const info = `✅ Telegram OK
+                        Platform: ${platform}
+                        Version: ${version}
+                        Theme: ${theme}`;
 
-                    // Проверяем данные
+                    telegramInfo.innerHTML = info.replace(/\n/g, '<br>');
+                    setStatus(`✅ Telegram: ${platform}`, 'success');
+
+                    // Проверяем данные пользователя
                     if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
                         const user = tg.initDataUnsafe.user;
-                        addDebug(`👤 ID: ${user.id}`);
-                        showMessage(`✅ Привет, ${user.first_name}!`);
+                        addDebug(`👤 User: ${user.id} (${user.first_name})`, 'success');
+                    }
+
+                    // Проверяем возможность отправки
+                    if (typeof tg.sendData === 'function') {
+                        addDebug('📤 sendData доступен', 'success');
+                    } else {
+                        addDebug('❌ sendData НЕ доступен', 'error');
                     }
 
                     return true;
                 } else {
-                    setStatus('❌ TG не найден', true);
-                    showMessage('❌ Откройте через бота Telegram', true);
+                    telegramInfo.innerHTML = '❌ Telegram WebApp не найден';
+                    setStatus('❌ Telegram не доступен', 'error');
+                    addDebug('❌ window.Telegram.WebApp отсутствует', 'error');
                     return false;
                 }
             } catch (e) {
-                setStatus('❌ Ошибка: ' + e.message, true);
-                showMessage('❌ ' + e.message, true);
+                telegramInfo.innerHTML = `❌ Ошибка: ${e.message}`;
+                setStatus('❌ Ошибка инициализации', 'error');
+                addDebug('❌ ' + e.message, 'error');
                 return false;
             }
         }
 
-        // Тест отправки
-        function sendTestData() {
-            if (!tg && !testTelegram()) return;
+        // Отправка данных с несколькими попытками
+        function sendDataToBot(data) {
+            sendAttempts++;
+
+            if (!tg) {
+                if (!testTelegram()) {
+                    showMessage('❌ Telegram не инициализирован', true);
+                    return false;
+                }
+            }
 
             try {
-                const testData = {
-                    type: 'test',
-                    message: 'Тест с телефона',
-                    timestamp: Date.now(),
-                    platform: tg.platform || 'unknown'
-                };
+                // Подготавливаем данные в разных форматах
+                const dataStr = JSON.stringify(data);
+                addDebug(`📤 Попытка ${sendAttempts}: ${dataStr.substring(0, 100)}`);
 
-                const jsonStr = JSON.stringify(testData);
-                addDebug('📤 Отправка: ' + jsonStr.substring(0, 100));
+                // Способ 1: Прямая отправка
+                tg.sendData(dataStr);
+                addDebug('✅ Отправлено методом 1', 'success');
 
-                // Пробуем отправить
-                tg.sendData(jsonStr);
-
-                setStatus('✅ Отправлено!');
-                showMessage('✅ Тест отправлен!');
+                // Показываем успех
+                setStatus('✅ Данные отправлены!', 'success');
+                showMessage('✅ Отправлено в бота!');
 
                 // Показываем кнопку закрытия
                 tg.MainButton.setText('✅ Закрыть');
                 tg.MainButton.show();
                 tg.MainButton.onClick(() => tg.close());
 
-            } catch (e) {
-                setStatus('❌ Ошибка: ' + e.message, true);
-                showMessage('❌ ' + e.message, true);
-                addDebug('❌ Детали: ' + JSON.stringify(e));
+                return true;
+
+            } catch (e1) {
+                addDebug(`❌ Метод 1 ошибка: ${e1.message}`, 'error');
+
+                try {
+                    // Способ 2: Через callback
+                    if (tg.sendDataToBot) {
+                        tg.sendDataToBot(dataStr);
+                        addDebug('✅ Отправлено методом 2', 'success');
+                        return true;
+                    }
+                } catch (e2) {
+                    addDebug(`❌ Метод 2 ошибка: ${e2.message}`, 'error');
+
+                    try {
+                        // Способ 3: Через iframe
+                        const iframe = document.createElement('iframe');
+                        iframe.style.display = 'none';
+                        iframe.src = 'tg://sendMessage?' + encodeURIComponent(dataStr);
+                        document.body.appendChild(iframe);
+                        setTimeout(() => document.body.removeChild(iframe), 100);
+                        addDebug('✅ Отправлено методом 3', 'success');
+                        return true;
+                    } catch (e3) {
+                        addDebug(`❌ Все методы не сработали`, 'error');
+                        showMessage('❌ Не удалось отправить данные', true);
+                        return false;
+                    }
+                }
             }
         }
 
-        // Отправка QR
+        // Тест отправки
+        function sendTestData() {
+            const testData = {
+                type: 'test',
+                message: 'Тест с телефона',
+                timestamp: Date.now(),
+                attempt: sendAttempts + 1
+            };
+
+            sendDataToBot(testData);
+        }
+
+        // Отправка отладочной информации
+        function sendDebugInfo() {
+            const debug = {
+                type: 'debug',
+                url: window.location.href,
+                userAgent: navigator.userAgent,
+                platform: tg ? tg.platform : 'none',
+                timestamp: Date.now(),
+                screen: `${window.screen.width}x${window.screen.height}`,
+                webappReady: webappReady
+            };
+
+            sendDataToBot(debug);
+        }
+
+        // Отправка QR кода
         function sendQR(qrData) {
-            if (!tg && !testTelegram()) return;
+            const qrPayload = {
+                type: 'qr_scanned',
+                code: qrData,
+                timestamp: Date.now(),
+                length: qrData.length
+            };
 
-            try {
-                const qrData2 = {
-                    type: 'qr_scanned',
-                    code: qrData,
-                    timestamp: Date.now()
-                };
+            sendDataToBot(qrPayload);
+        }
 
-                addDebug('📤 Отправка QR...');
-                tg.sendData(JSON.stringify(qrData2));
-
-                setStatus('✅ QR отправлен!');
-                showMessage('✅ QR-код отправлен!');
-
-                tg.MainButton.setText('✅ Закрыть');
-                tg.MainButton.show();
-                tg.MainButton.onClick(() => tg.close());
-
-            } catch (e) {
-                setStatus('❌ Ошибка: ' + e.message, true);
-                showMessage('❌ ' + e.message, true);
+        // Ручная отправка
+        function sendManual() {
+            const text = manualInput.value.trim();
+            if (!text) {
+                showMessage('❌ Введите данные', true);
+                return;
             }
+            sendQR(text);
+            manualInput.value = '';
         }
 
         // Инициализация камеры
         async function initCamera() {
             try {
-                setStatus('⏳ Запрос камеры...');
+                setStatus('⏳ Запрос камеры...', 'info');
 
                 const constraints = {
                     video: {
@@ -378,15 +468,16 @@
                 video.srcObject = stream;
 
                 await video.play();
-                setStatus('✅ Камера готова');
+                setStatus('✅ Камера готова', 'success');
 
             } catch (err) {
-                setStatus('❌ Ошибка: ' + err.message, true);
+                setStatus('❌ Ошибка камеры', 'error');
                 showMessage('❌ ' + err.message, true);
+                addDebug('❌ ' + err.message, 'error');
             }
         }
 
-        // Сканирование
+        // Начать сканирование
         function startScan() {
             if (!stream) {
                 initCamera().then(startScan);
@@ -396,7 +487,7 @@
             scanning = true;
             scanBtn.style.display = 'none';
             stopBtn.style.display = 'block';
-            setStatus('🔍 Сканирование...');
+            setStatus('🔍 Сканирование...', 'info');
 
             scanInterval = setInterval(() => {
                 if (!scanning || !video.videoWidth) return;
@@ -413,19 +504,22 @@
                     const code = jsQR(imageData.data, canvas.width, canvas.height);
 
                     if (code && code.data && code.data.length > 10) {
-                        addDebug('✅ QR найден');
+                        addDebug('✅ QR обнаружен!', 'success');
                         stopScan();
                         sendQR(code.data);
                     }
-                } catch (e) {}
+                } catch (e) {
+                    // Тихая ошибка сканирования
+                }
             }, 300);
         }
 
+        // Остановить сканирование
         function stopScan() {
             scanning = false;
             scanBtn.style.display = 'block';
             stopBtn.style.display = 'none';
-            setStatus('⏹️ Остановлено');
+            setStatus('⏹️ Остановлено', 'info');
 
             if (scanInterval) {
                 clearInterval(scanInterval);
@@ -433,17 +527,7 @@
             }
         }
 
-        function sendManual() {
-            const text = manualInput.value.trim();
-            if (!text) {
-                showMessage('❌ Введите данные', true);
-                return;
-            }
-            sendQR(text);
-            manualInput.value = '';
-        }
-
-        // Очистка
+        // Очистка ресурсов
         function cleanup() {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
@@ -457,6 +541,14 @@
         window.addEventListener('load', () => {
             addDebug('📱 Страница загружена');
             addDebug('🌐 URL: ' + window.location.href);
+
+            // Проверяем, открыто ли в Telegram
+            if (navigator.userAgent.includes('Telegram')) {
+                addDebug('📱 Запущено в Telegram WebView');
+            } else {
+                addDebug('🌐 Запущено в браузере');
+            }
+
             testTelegram();
             initCamera();
         });
