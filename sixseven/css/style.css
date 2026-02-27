@@ -1,0 +1,189 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #000;
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.container {
+    max-width: 480px;
+    width: 100%;
+    background: #111;
+    border-radius: 32px;
+    padding: 24px 20px 32px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+}
+
+h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    background: linear-gradient(135deg, #40a7e3, #7f5af0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.badge {
+    background: #1e1e1e;
+    padding: 6px 14px;
+    border-radius: 40px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: 1px solid #2e2e2e;
+}
+
+.video-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4/3;
+    background: #0a0a0a;
+    border-radius: 24px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    border: 1px solid #2a2a2a;
+}
+
+#video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.scan-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.scan-frame {
+    width: 70%;
+    height: 50%;
+    border: 2px solid #40a7e3;
+    border-radius: 24px;
+    box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.5);
+    position: relative;
+}
+
+.scan-line {
+    position: absolute;
+    top: 0;
+    left: 10%;
+    width: 80%;
+    height: 2px;
+    background: #40a7e3;
+    box-shadow: 0 0 10px #40a7e3;
+    animation: scan 2s ease-in-out infinite;
+}
+
+@keyframes scan {
+    0% { top: 5%; }
+    50% { top: 90%; }
+    100% { top: 5%; }
+}
+
+.controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.btn {
+    flex: 1;
+    padding: 14px;
+    border: none;
+    border-radius: 40px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: 0.2s;
+    background: #2a2a2a;
+    color: white;
+}
+
+.btn.primary {
+    background: #40a7e3;
+    color: black;
+}
+
+.btn.secondary {
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+}
+
+.btn:hover {
+    opacity: 0.9;
+}
+
+.card {
+    background: #1a1a1a;
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid #2a2a2a;
+}
+
+.status {
+    color: #aaa;
+    font-size: 0.95rem;
+}
+
+.result {
+    margin-top: 12px;
+    padding: 14px;
+    background: #0e2a1a;
+    border: 1px solid #2e7d5e;
+    border-radius: 16px;
+    color: #b5ffd0;
+    word-break: break-word;
+    font-size: 0.85rem;
+}
+
+.result.hidden {
+    display: none;
+}
+
+input {
+    width: 100%;
+    padding: 14px;
+    border-radius: 40px;
+    border: 1px solid #3a3a3a;
+    background: #0f0f0f;
+    color: white;
+    font-size: 1rem;
+    margin-bottom: 12px;
+    outline: none;
+}
+
+input:focus {
+    border-color: #40a7e3;
+}
+
+footer {
+    text-align: center;
+    color: #666;
+    font-size: 0.75rem;
+    margin-top: 12px;
+}

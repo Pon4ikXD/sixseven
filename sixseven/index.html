@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pulse QR Scanner</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>📷 Pulse QR Scanner</h1>
+            <div class="badge" id="tgStatus">⚪ Telegram</div>
+        </header>
+
+        <main>
+            <div class="video-wrapper">
+                <video id="video" playsinline autoplay></video>
+                <div class="scan-overlay">
+                    <div class="scan-frame">
+                        <div class="scan-line"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="btn primary" id="scanBtn">▶️ Начать сканирование</button>
+                <button class="btn secondary" id="stopBtn" style="display: none;">⏹️ Остановить</button>
+            </div>
+
+            <div class="card">
+                <div class="status" id="status">⏳ Загрузка камеры...</div>
+                <div id="result" class="result hidden"></div>
+            </div>
+
+            <div class="card">
+                <h3>📎 Ручной ввод</h3>
+                <input type="text" id="manualInput" placeholder="Вставьте QR-код или токен" />
+                <button class="btn secondary" id="manualSend">📤 Отправить</button>
+            </div>
+        </main>
+
+        <footer>
+            <p>Наведи камеру на QR-код пары</p>
+        </footer>
+    </div>
+
+    <script src="js/scanner.js"></script>
+</body>
+</html>
