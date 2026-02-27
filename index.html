@@ -268,7 +268,7 @@
 
         <!-- Область для результатов -->
         <div id="resultArea"></div>
-        
+
         <!-- Ручной ввод -->
         <div class="manual-section">
             <input type="text" class="manual-input" id="manualQr" placeholder="Вставьте QR-код или токен">
@@ -284,7 +284,7 @@
         let tg = null;
         let webappReady = false;
         let debugMessages = [];
-        
+
         // Элементы DOM
         const video = document.getElementById('video');
         const statusEl = document.getElementById('status');
@@ -310,11 +310,11 @@
                     tg.ready();
                     tg.expand();
                     webappReady = true;
-                    
+
                     // Настраиваем главную кнопку
                     tg.MainButton.setText('Закрыть');
                     tg.MainButton.hide();
-                    
+
                     addDebugLog('✅ Telegram WebApp инициализирован');
                     updateStatus('✅ Telegram готов', 'success');
                     return true;
@@ -341,16 +341,16 @@
 
         // Добавление отладочного сообщения
         function addDebugLog(message) {
-            const timestamp = new Date().toLocaleTimeString('ru-RU', { 
-                hour12: false, 
-                hour: '2-digit', 
-                minute: '2-digit', 
-                second: '2-digit' 
+            const timestamp = new Date().toLocaleTimeString('ru-RU', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
             });
-            
+
             debugMessages.unshift(`[${timestamp}] ${message}`);
             if (debugMessages.length > 5) debugMessages.pop();
-            
+
             debugLogEl.innerHTML = debugMessages.join('<br>');
             console.log(message);
         }
@@ -360,10 +360,10 @@
             const div = document.createElement('div');
             div.className = isError ? 'error-box' : 'result';
             div.textContent = message;
-            
+
             resultArea.innerHTML = '';
             resultArea.appendChild(div);
-            
+
             setTimeout(() => {
                 if (resultArea.firstChild === div) {
                     div.style.opacity = '0';
@@ -394,7 +394,7 @@
                 });
 
                 video.srcObject = stream;
-                
+
                 // Ждем готовности видео
                 await new Promise((resolve) => {
                     video.onloadedmetadata = () => {
@@ -409,7 +409,7 @@
             } catch (err) {
                 updateStatus('❌ Ошибка камеры', 'error');
                 addDebugLog('❌ Ошибка камеры: ' + err.message);
-                
+
                 let errorMessage = '❌ Ошибка камеры';
                 if (err.name === 'NotAllowedError') {
                     errorMessage = '❌ Доступ к камере запрещён';
@@ -418,7 +418,7 @@
                 } else if (err.name === 'NotReadableError') {
                     errorMessage = '❌ Камера занята другим приложением';
                 }
-                
+
                 showResult(errorMessage, true);
             }
         }
@@ -488,16 +488,16 @@
 
                 for (const attempt of attempts) {
                     const code = jsQR(imageData.data, width, height, attempt);
-                    
+
                     if (code && code.data && code.data.length >= MIN_QR_LENGTH) {
                         // Валидируем QR-код (должен содержать token или быть URL)
                         const qrData = code.data.trim();
-                        
-                        if (qrData.includes('token=') || 
-                            qrData.includes('attendance') || 
+
+                        if (qrData.includes('token=') ||
+                            qrData.includes('attendance') ||
                             qrData.startsWith('http') ||
                             /^[A-Za-z0-9+/=]{20,}$/.test(qrData)) {
-                            
+
                             addDebugLog('✅ QR-код обнаружен: ' + qrData.substring(0, 50) + '...');
                             handleQRDetected(qrData);
                             break;
@@ -520,7 +520,7 @@
             // Показываем результат
             showResult('✅ QR найден: ' + qrData.substring(0, 100) + '...');
             updateStatus('✅ QR-код обнаружен!', 'success');
-            
+
             // Отправляем в бота
             sendToBot(qrData);
         }
@@ -544,10 +544,10 @@
 
                 // Формат 1: полный объект
                 const jsonStr1 = JSON.stringify(payload);
-                
+
                 // Формат 2: упрощённый (для обратной совместимости)
                 const jsonStr2 = JSON.stringify({ qr: qrData });
-                
+
                 // Формат 3: только код
                 const jsonStr3 = JSON.stringify({ data: qrData, type: 'qr' });
 
@@ -574,7 +574,7 @@
                 // Успех
                 updateStatus('✅ QR-код отправлен!', 'success');
                 showResult('✅ QR-код успешно отправлен в бота!');
-                
+
                 // Показываем кнопку закрытия
                 tg.MainButton.setText('✅ Закрыть');
                 tg.MainButton.show();
@@ -598,7 +598,7 @@
                 showResult('❌ Введите QR-код', true);
                 return;
             }
-            
+
             if (qrText.length < MIN_QR_LENGTH) {
                 showResult('❌ QR-код слишком короткий', true);
                 return;
