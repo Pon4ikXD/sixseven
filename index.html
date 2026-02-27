@@ -103,18 +103,39 @@
 
         .result.active {
             display: block;
+            border: 1px solid #00ff00;
         }
 
-        .debug {
+        .error {
+            background: #4d1a1a;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+            font-size: 12px;
+            word-break: break-all;
+            display: none;
+            border: 1px solid #ff0000;
+        }
+
+        .error.active {
+            display: block;
+        }
+
+        .manual-send {
             background: #333;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+
+        .manual-send input {
+            width: 100%;
             padding: 8px;
             border-radius: 4px;
-            font-size: 10px;
-            color: #0f0;
-            margin-top: 8px;
-            max-height: 100px;
-            overflow: auto;
-            display: none; /* Скрываем для пользователя, но можно включить для отладки */
+            border: 1px solid #40a7e3;
+            background: #222;
+            color: #fff;
+            margin-bottom: 8px;
         }
     </style>
 </head>
@@ -129,37 +150,39 @@
     <div class="controls">
         <div class="status" id="status">⏳ Запуск камеры...</div>
 
-        <!-- Только одна кнопка для сканирования -->
         <button class="button" id="scanBtn" onclick="startScan()">▶️ Начать сканирование</button>
         <button class="button stop" id="stopBtn" onclick="stopScan()" style="display: none;">⏹️ Остановить</button>
-
+        
         <div class="result" id="result"></div>
-        <!-- <div class="debug" id="debug"></div> --> <!-- Закомментировано для продакшена -->
+        <div class="error" id="error"></div>
+        
+        <!-- Ручной ввод на случай проблем с камерой -->
+        <div class="manual-send">
+            <input type="text" id="manualQr" placeholder="Вставьте QR-код вручную">
+            <button class="button" onclick="sendManualQr()">📤 Отправить вручную</button>
+        </div>
     </div>
 
     <script>
         // Инициализация Telegram
         let tg = null;
+        let webappReady = false;
+        
         try {
             if (window.Telegram && window.Telegram.WebApp) {
                 tg = window.Telegram.WebApp;
                 tg.ready();
                 tg.expand();
-                
-                // ВАЖНО: Устанавливаем цвет кнопок в тему Telegram
-                tg.MainButton.setParams({
-                    text: 'СКАНИРОВАТЬ QR',
-                    color: '#40a7e3',
-                    text_color: '#ffffff'
-                });
-                
-                console.log('✅ Telegram инициализирован');
+                webappReady = true;
+                console.log('✅ Telegram WebApp инициализирован');
+                showStatus('✅ Telegram готов');
             } else {
                 console.error('❌ Telegram WebApp не найден');
-                alert('Ошибка: Telegram WebApp не инициализирован. Откройте через бота.');
+                showError('❌ Ошибка: откройте через бота Telegram');
             }
         } catch (e) {
-            console.error('❌ Ошибка Telegram:', e);
+            console.error('❌ Ошибка инициализации Telegram:', e);
+            showError('❌ Ошибка: ' + e.message);
         }
 
         const video = document.getElementById('video');
@@ -167,15 +190,39 @@
         const scanBtn = document.getElementById('scanBtn');
         const stopBtn = document.getElementById('stopBtn');
         const resultEl = document.getElementById('result');
+        const errorEl = document.getElementById('error');
+        const manualQrInput = document.getElementById('manualQr');
 
         let stream = null;
         let scanning = false;
         let scanInterval = null;
 
+        function showStatus(text) {
+            statusEl.textContent = text;
+            console.log('Status:', text);
+        }
+
+        function showResult(text) {
+            resultEl.textContent = text;
+            resultEl.classList.add('active');
+            setTimeout(() => {
+                resultEl.classList.remove('active');
+            }, 5000);
+        }
+
+        function showError(text) {
+            errorEl.textContent = text;
+            errorEl.classList.add('active');
+            console.error('Error:', text);
+            setTimeout(() => {
+                errorEl.classList.remove('active');
+            }, 5000);
+        }
+
         // Запуск камеры
         async function initCamera() {
             try {
-                statusEl.textContent = '⏳ Запрос доступа к камере...';
+                showStatus('⏳ Запрос доступа к камере...');
 
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: {
@@ -188,18 +235,17 @@
                 video.srcObject = stream;
                 await video.play();
 
-                statusEl.textContent = '✅ Камера готова. Нажмите "Начать сканирование"';
+                showStatus('✅ Камера готова. Нажмите "Начать сканирование"');
                 scanBtn.disabled = false;
 
             } catch (err) {
-                statusEl.textContent = '❌ Ошибка камеры: ' + err.message;
-                console.error('Camera error:', err);
+                showStatus('❌ Ошибка камеры: ' + err.message);
+                showError('❌ Ошибка камеры: ' + err.message);
                 
-                // Показываем инструкцию при ошибке
                 if (err.name === 'NotAllowedError') {
-                    statusEl.textContent = '❌ Доступ к камере запрещен. Разрешите в настройках браузера.';
+                    showError('❌ Доступ к камере запрещен. Разрешите в настройках браузера.');
                 } else if (err.name === 'NotFoundError') {
-                    statusEl.textContent = '❌ Камера не найдена на устройстве';
+                    showError('❌ Камера не найдена на устройстве');
                 }
             }
         }
@@ -214,9 +260,9 @@
             scanning = true;
             scanBtn.style.display = 'none';
             stopBtn.style.display = 'block';
-            statusEl.textContent = '🔍 Сканирование... Наведите на QR-код';
+            showStatus('🔍 Сканирование... Наведите на QR-код');
 
-            scanInterval = setInterval(scanQR, 300); // Увеличили частоту сканирования
+            scanInterval = setInterval(scanQR, 200);
         }
 
         // Остановить сканирование
@@ -224,7 +270,7 @@
             scanning = false;
             scanBtn.style.display = 'block';
             stopBtn.style.display = 'none';
-            statusEl.textContent = '⏹️ Сканирование остановлено';
+            showStatus('⏹️ Сканирование остановлено');
 
             if (scanInterval) {
                 clearInterval(scanInterval);
@@ -238,7 +284,9 @@
             try {
                 const canvas = document.createElement('canvas');
                 canvas.width = video.videoWidth;
+                canvas.width = Math.min(canvas.width, 640); // Оптимизация
                 canvas.height = video.videoHeight;
+                canvas.height = Math.min(canvas.height, 480);
 
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -248,15 +296,14 @@
                     inversionAttempts: 'dontInvert'
                 });
 
-                if (code && code.data) {
+                if (code && code.data && code.data.length > 10) {
                     console.log('✅ QR найден:', code.data.substring(0, 50));
                     
                     // Останавливаем сканирование
                     stopScan();
 
                     // Показываем результат
-                    resultEl.textContent = '✅ QR найден: ' + code.data.substring(0, 100) + (code.data.length > 100 ? '...' : '');
-                    resultEl.classList.add('active');
+                    showResult('✅ QR найден: ' + code.data.substring(0, 50) + '...');
                     
                     // Отправляем в бота
                     sendToBot(code.data);
@@ -268,34 +315,32 @@
 
         // Отправка данных в бота
         function sendToBot(qrData) {
-            if (!tg) {
-                statusEl.textContent = '❌ Ошибка: Telegram не инициализирован';
+            if (!webappReady || !tg) {
+                showError('❌ Telegram не инициализирован');
                 return;
             }
 
             try {
-                // Формируем данные для отправки
+                // Формируем данные
                 const payload = {
                     type: 'qr_scanned',
                     code: qrData,
                     timestamp: Date.now()
                 };
 
-                // Преобразуем в JSON строку
                 const jsonStr = JSON.stringify(payload);
                 
                 console.log('📤 Отправка данных:', jsonStr);
-                statusEl.textContent = '📤 Отправка данных...';
+                showStatus('📤 Отправка данных...');
 
-                // ВАЖНО: Отправляем данные через Telegram WebApp
+                // Отправляем через Telegram WebApp
                 tg.sendData(jsonStr);
 
-                // Обновляем статус
-                statusEl.textContent = '✅ QR-код отправлен!';
-                resultEl.textContent = '✅ Отправлено! Бот обрабатывает...';
+                showStatus('✅ QR-код отправлен!');
+                showResult('✅ Отправлено! Проверьте бота');
 
                 // Показываем кнопку закрытия
-                tg.MainButton.setText('✅ Готово');
+                tg.MainButton.setText('✅ Закрыть');
                 tg.MainButton.show();
                 tg.MainButton.onClick(() => {
                     tg.close();
@@ -303,27 +348,35 @@
 
             } catch (err) {
                 console.error('❌ Ошибка отправки:', err);
-                statusEl.textContent = '❌ Ошибка отправки: ' + err.message;
+                showError('❌ Ошибка отправки: ' + err.message);
                 
-                // Альтернативный способ отправки
+                // Пробуем альтернативный метод
                 tryAlternativeSend(qrData);
             }
         }
 
-        // Альтернативный способ отправки (на случай ошибки)
+        // Альтернативный метод отправки
         function tryAlternativeSend(qrData) {
             try {
-                // Пробуем отправить через WebApp напрямую
                 if (tg && tg.sendData) {
                     const simpleData = JSON.stringify({ qr: qrData });
                     tg.sendData(simpleData);
                     console.log('📤 Альтернативная отправка:', simpleData);
-                    statusEl.textContent = '✅ Отправлено (альт.)';
+                    showStatus('✅ Отправлено (альт.)');
                 }
             } catch (e) {
-                console.error('❌ Альтернативная отправка тоже не удалась:', e);
-                statusEl.textContent = '❌ Не удалось отправить. Попробуйте еще раз.';
+                showError('❌ Не удалось отправить');
             }
+        }
+
+        // Ручная отправка
+        function sendManualQr() {
+            const qrText = manualQrInput.value.trim();
+            if (!qrText) {
+                showError('❌ Введите QR-код');
+                return;
+            }
+            sendToBot(qrText);
         }
 
         // Запускаем камеру при загрузке
@@ -338,13 +391,6 @@
                 clearInterval(scanInterval);
             }
         });
-
-        // Добавляем обработчик для MainButton
-        if (tg) {
-            tg.onEvent('mainButtonClicked', function() {
-                tg.close();
-            });
-        }
     </script>
 </body>
 </html>
